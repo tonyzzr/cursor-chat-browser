@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card } from "@/components/ui/card"
 import { ArrowLeft } from "lucide-react"
@@ -22,7 +22,6 @@ interface WorkspaceState {
 }
 
 export default function WorkspacePage({ params }: { params: { id: string } }) {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const [state, setState] = useState<WorkspaceState>({
     workspace: null,
@@ -31,33 +30,43 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
     isLoading: true
   })
 
-  // Single fetch function for workspace data
+  // Get initial tab ID from URL
+  const initialTabId = useMemo(() => searchParams.get('tab'), [])
+
+  // Single fetch function for all workspace data
   const fetchWorkspaceData = useCallback(async () => {
     try {
-      const tabsRes = await fetch(`/api/workspaces/${params.id}/tabs`).then(r => r.json())
-      const workspaceRes = await fetch(`/api/workspaces/${params.id}`).then(r => r.json())
-      
-      // Get the tab ID from URL parameters
-      const urlTabId = searchParams.get('tab')
-      
+      const [workspaceRes, tabsRes] = await Promise.all([
+        fetch(`/api/workspaces/${params.id}`),
+        fetch(`/api/workspaces/${params.id}/tabs`)
+      ])
+
+      const [workspace, tabs] = await Promise.all([
+        workspaceRes.json(),
+        tabsRes.json()
+      ])
+
       // Find the requested tab, or default to first tab
       let selectedId = null
-      if (urlTabId) {
-        const requestedTab = tabsRes.find((t: ChatTab) => t.id === urlTabId)
+      if (initialTabId) {
+        const requestedTab = tabs.find((t: ChatTab) => t.id === initialTabId)
         if (requestedTab) {
           selectedId = requestedTab.id
         }
       }
       
-      // If no valid tab ID from URL, use first tab
-      if (!selectedId && tabsRes.length > 0) {
-        selectedId = tabsRes[0].id
-        router.replace(`/workspace/${params.id}?tab=${selectedId}`)
+      // If no valid tab ID, use first tab
+      if (!selectedId && tabs.length > 0) {
+        selectedId = tabs[0].id
+        // Update URL without triggering navigation
+        const newUrl = new URL(window.location.href)
+        newUrl.searchParams.set('tab', selectedId)
+        window.history.replaceState({}, '', newUrl)
       }
-      
+
       setState({
-        workspace: workspaceRes,
-        tabs: tabsRes,
+        workspace,
+        tabs,
         selectedTabId: selectedId,
         isLoading: false
       })
@@ -65,17 +74,19 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
       console.error('Failed to fetch workspace data:', error)
       setState(prev => ({ ...prev, isLoading: false }))
     }
-  }, [params.id, router, searchParams])
+  }, [params.id, initialTabId]) // Only depend on params.id and initial tab ID
 
-  // Initial data fetch
+  // Fetch data only once when component mounts
   useEffect(() => {
     fetchWorkspaceData()
   }, [fetchWorkspaceData])
 
   const handleTabSelect = useCallback((tabId: string) => {
     setState(prev => ({ ...prev, selectedTabId: tabId }))
-    router.replace(`/workspace/${params.id}?tab=${tabId}`)
-  }, [params.id, router])
+    const newUrl = new URL(window.location.href)
+    newUrl.searchParams.set('tab', tabId)
+    window.history.replaceState({}, '', newUrl)
+  }, []) // No dependencies needed
 
   if (state.isLoading) {
     return <Loading message="Loading workspace..." />

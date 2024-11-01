@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { format } from "date-fns"
-import Link from "next/link"
 import { Workspace } from "@/types/workspace"
+import { useRouter } from 'next/navigation'
 import {
   Table,
   TableBody,
@@ -13,7 +13,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Loading } from "@/components/ui/loading"
-import { useRouter } from 'next/navigation'
 
 export function WorkspaceList() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
@@ -36,18 +35,8 @@ export function WorkspaceList() {
     fetchWorkspaces()
   }, [])
 
-  const handleWorkspaceClick = async (workspaceId: string) => {
-    try {
-      const tabs = await fetch(`/api/workspaces/${workspaceId}/tabs`).then(r => r.json())
-      if (tabs.length > 0) {
-        router.push(`/workspace/${workspaceId}?tab=${tabs[0].id}`)
-      } else {
-        router.push(`/workspace/${workspaceId}`)
-      }
-    } catch (error) {
-      console.error('Failed to fetch tabs:', error)
-      router.push(`/workspace/${workspaceId}`)
-    }
+  const handleWorkspaceClick = (workspaceId: string) => {
+    router.push(`/workspace/${workspaceId}`)
   }
 
   if (loading) {

@@ -32,13 +32,26 @@ A web application for browsing and managing chat histories from the Cursor edito
   npm install
   ```
 
-3. Create a `.env.local` file in the root directory:
-  ```bash
-  # Linux/macOS
-  WORKSPACE_PATH=/home/YOUR_USERNAME/.cursor/extensions/cursor.chat-0.1.0/workspaces
+3. Create a `.env.local` file in the root directory with the appropriate path for your system:
 
-  # Windows
-  WORKSPACE_PATH=C:\Users\YOUR_USERNAME\AppData\Roaming\.cursor\extensions\cursor.chat-0.1.0\workspaces
+### Windows (native)
+  ```bash
+  WORKSPACE_PATH=C:\Users\YOUR_USERNAME\AppData\Roaming\Cursor\User\workspaceStorage
+  ```
+
+### Windows (WSL2)
+  ```bash
+  WORKSPACE_PATH=/mnt/c/Users/YOUR_USERNAME/AppData/Roaming/Cursor/User/workspaceStorage
+  ```
+
+### macOS
+  ```bash
+  WORKSPACE_PATH=~/Library/Application Support/Cursor/User/workspaceStorage
+  ```
+
+### Linux
+  ```bash
+  WORKSPACE_PATH=~/.config/Cursor/User/workspaceStorage
   ```
 
 4. Start the development server:
@@ -50,22 +63,31 @@ A web application for browsing and managing chat histories from the Cursor edito
 
 ## Finding Your Workspace Path
 
-### Linux
-The default path is:
-  ```bash
-  ~/.cursor/extensions/cursor.chat-0.1.0/workspaces
+The location of your Cursor chat history depends on your operating system and setup:
+
+### Windows (native)
+The default path is in your AppData folder:
   ```
+  C:\Users\YOUR_USERNAME\AppData\Roaming\Cursor\User\workspaceStorage
+  ```
+
+### Windows (WSL2)
+When running under WSL2, you need to use the mounted Windows path:
+  ```
+  /mnt/c/Users/YOUR_USERNAME/AppData/Roaming/Cursor/User/workspaceStorage
+  ```
+Note: Replace `YOUR_USERNAME` with your actual Windows username, not your WSL username.
 
 ### macOS
 The default path is:
-  ```bash
-  ~/Library/Application Support/.cursor/extensions/cursor.chat-0.1.0/workspaces
+  ```
+  ~/Library/Application Support/Cursor/User/workspaceStorage
   ```
 
-### Windows
+### Linux
 The default path is:
-  ```bash
-  %APPDATA%\.cursor\extensions\cursor.chat-0.1.0\workspaces
+  ```
+  ~/.config/Cursor/User/workspaceStorage
   ```
 
 ## Development
