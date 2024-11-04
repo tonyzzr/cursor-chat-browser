@@ -4,8 +4,10 @@ A web application for browsing and managing chat histories from the Cursor edito
 
 ## Features
 
-- 🔍 Browse all workspaces with Cursor chat history
+- 🔍 Browse and search all workspaces with Cursor chat history
+- 🤖 View both AI chat logs and Composer logs
 - 📁 Organize chats by workspace
+- 🔎 Full-text search with filters for chat/composer logs
 - 📱 Responsive design with dark/light mode support
 - ⬇️ Export chats as:
   - Markdown files
@@ -13,6 +15,7 @@ A web application for browsing and managing chat histories from the Cursor edito
   - PDF documents
 - 🎨 Syntax highlighted code blocks
 - 📌 Bookmarkable chat URLs
+- ⚙️ Automatic workspace path detection
 
 ## Prerequisites
 
@@ -32,63 +35,49 @@ A web application for browsing and managing chat histories from the Cursor edito
   npm install
   ```
 
-3. Create a `.env.local` file in the root directory with the appropriate path for your system:
-
-### Windows (native)
-  ```bash
-  WORKSPACE_PATH=C:\Users\YOUR_USERNAME\AppData\Roaming\Cursor\User\workspaceStorage
-  ```
-
-### Windows (WSL2)
-  ```bash
-  WORKSPACE_PATH=/mnt/c/Users/YOUR_USERNAME/AppData/Roaming/Cursor/User/workspaceStorage
-  ```
-
-### macOS
-  ```bash
-  WORKSPACE_PATH=~/Library/Application Support/Cursor/User/workspaceStorage
-  ```
-
-### Linux
-  ```bash
-  WORKSPACE_PATH=~/.config/Cursor/User/workspaceStorage
-  ```
-
-4. Start the development server:
+3. Start the development server:
   ```bash
   npm run dev
   ```
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser
+4. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-## Finding Your Workspace Path
+## Configuration
 
-The location of your Cursor chat history depends on your operating system and setup:
+The application automatically detects your Cursor workspace storage location based on your operating system:
 
-### Windows (native)
-The default path is in your AppData folder:
-  ```
-  C:\Users\YOUR_USERNAME\AppData\Roaming\Cursor\User\workspaceStorage
-  ```
+- Windows: `%APPDATA%\Cursor\User\workspaceStorage`
+- WSL2: `/mnt/c/Users/<USERNAME>/AppData/Roaming/Cursor/User/workspaceStorage`
+- macOS: `~/Library/Application Support/Cursor/User/workspaceStorage`
+- Linux: `~/.config/Cursor/User/workspaceStorage`
 
-### Windows (WSL2)
-When running under WSL2, you need to use the mounted Windows path:
-  ```
-  /mnt/c/Users/YOUR_USERNAME/AppData/Roaming/Cursor/User/workspaceStorage
-  ```
-Note: Replace `YOUR_USERNAME` with your actual Windows username, not your WSL username.
+If automatic detection fails, you can manually set the path in the Configuration page (⚙️).
 
-### macOS
-The default path is:
-  ```
-  ~/Library/Application Support/Cursor/User/workspaceStorage
-  ```
+## Usage
 
-### Linux
-The default path is:
-  ```
-  ~/.config/Cursor/User/workspaceStorage
-  ```
+### Browsing Logs
+- View all workspaces on the home page
+- Browse AI chat logs by workspace
+- Access Composer logs from the navigation menu
+- Navigate between different chat tabs within a workspace
+- View combined logs with type indicators
+- See chat and composer counts per workspace
+
+### Searching
+- Use the search bar in the navigation to search across all logs
+- Filter results by chat logs, composer logs, or both
+- Search results show:
+  - Type badge (Chat/Composer)
+  - Matching text snippets
+  - Workspace location
+  - Title
+  - Timestamp
+
+### Exporting
+Each log can be exported as:
+- Markdown: Plain text with code blocks
+- HTML: Styled document with syntax highlighting
+- PDF: Formatted document suitable for sharing
 
 ## Development
 
@@ -106,6 +95,10 @@ Built with:
 3. Commit your changes (`git commit -m 'Add some amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for a list of changes.
 
 ## License
 

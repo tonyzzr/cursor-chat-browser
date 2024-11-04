@@ -34,3 +34,19 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# cursor chat browser specific
+# sqlite databases
+*.vscdb
+*.vscdb-shm
+*.vscdb-wal
+
+# data logs and workspace storage
+workspaceStorage/
+state.vscdb*
+workspace.json
+
+# cursor data files
+aichat.data.json
+composer_data.json
+

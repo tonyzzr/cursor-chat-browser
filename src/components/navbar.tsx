@@ -31,7 +31,7 @@ export function Navbar() {
           <form onSubmit={handleSearch} className="relative">
             <Input
               type="search"
-              placeholder="Search chat logs..."
+              placeholder="Search chat and composer logs..."
               className="w-full pl-10"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -42,7 +42,15 @@ export function Navbar() {
         
         <div className="flex items-center space-x-4">
           <Button variant="ghost" asChild>
-            <Link href="/">Chat Logs</Link>
+            <Link href="/">Workspaces</Link>
+          </Button>
+          
+          <Button variant="ghost" asChild>
+            <Link href="/chat">Chat Logs</Link>
+          </Button>
+          
+          <Button variant="ghost" asChild>
+            <Link href="/composer">Composer Logs</Link>
           </Button>
           
           <Tooltip>

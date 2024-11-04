@@ -14,8 +14,12 @@ import {
 } from "@/components/ui/table"
 import { Loading } from "@/components/ui/loading"
 
+interface WorkspaceWithCounts extends Workspace {
+  composerCount: number;
+}
+
 export function WorkspaceList() {
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([])
+  const [workspaces, setWorkspaces] = useState<WorkspaceWithCounts[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
@@ -24,7 +28,21 @@ export function WorkspaceList() {
       try {
         const response = await fetch('/api/workspaces')
         const data = await response.json()
-        setWorkspaces(data)
+        
+        // Fetch composer counts for each workspace
+        const workspacesWithCounts = await Promise.all(
+          data.map(async (workspace: Workspace) => {
+            const tabsRes = await fetch(`/api/workspaces/${workspace.id}/tabs`)
+            const tabsData = await tabsRes.json()
+            const composerCount = tabsData.composers?.allComposers?.length || 0
+            return {
+              ...workspace,
+              composerCount
+            }
+          })
+        )
+        
+        setWorkspaces(workspacesWithCounts)
       } catch (error) {
         console.error('Failed to fetch workspaces:', error)
       } finally {
@@ -51,13 +69,14 @@ export function WorkspaceList() {
             <TableHead>Workspace Hash</TableHead>
             <TableHead>Folder</TableHead>
             <TableHead>Last Modified</TableHead>
-            <TableHead className="text-right">Chats</TableHead>
+            <TableHead className="text-right">Chat Logs</TableHead>
+            <TableHead className="text-right">Composer Logs</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {workspaces
             .sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime())
-            .filter(workspace => workspace.chatCount > 0)
+            .filter(workspace => workspace.chatCount > 0 || workspace.composerCount > 0)
             .map((workspace) => (
               <TableRow key={workspace.id} className="hover:bg-accent/50">
                 <TableCell>
@@ -85,6 +104,9 @@ export function WorkspaceList() {
                 </TableCell>
                 <TableCell className="text-right">
                   {workspace.chatCount}
+                </TableCell>
+                <TableCell className="text-right">
+                  {workspace.composerCount}
                 </TableCell>
               </TableRow>
             ))}

@@ -6,6 +6,8 @@ import Link from "next/link"
 import { format } from "date-fns"
 import { Card } from "@/components/ui/card"
 import { Loading } from "@/components/ui/loading"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 
 interface SearchResult {
   workspaceId: string
@@ -14,91 +16,98 @@ interface SearchResult {
   chatTitle: string
   timestamp: string | number
   matchingText: string
+  type: 'chat' | 'composer'
 }
 
 export default function SearchPage() {
   const searchParams = useSearchParams()
-  const query = searchParams.get('q') || ''
+  const query = searchParams.get('q')
+  const type = searchParams.get('type') || 'all'
   const [results, setResults] = useState<SearchResult[]>([])
-  const [loading, setLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const searchChats = async () => {
-      setLoading(true)
+    const search = async () => {
+      if (!query) return
+      setIsLoading(true)
       try {
-        const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
+        const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&type=${type}`)
         const data = await response.json()
         setResults(data)
       } catch (error) {
         console.error('Failed to search:', error)
       } finally {
-        setLoading(false)
+        setIsLoading(false)
       }
     }
-
-    if (query) {
-      searchChats()
-    }
-  }, [query])
-
-  if (loading) {
-    return <Loading message="Searching chat logs..." />
-  }
+    search()
+  }, [query, type])
 
   if (!query) {
-    return <div className="text-center text-muted-foreground mt-8">Enter a search term to find chat logs</div>
+    return <div>No search query provided</div>
   }
 
-  const formatDate = (timestamp: string | number) => {
-    try {
-      // Handle both string dates and numeric timestamps
-      const date = typeof timestamp === 'number' ? new Date(timestamp) : new Date(timestamp)
-      return format(date, 'PPp')
-    } catch {
-      return 'Unknown date'
-    }
+  if (isLoading) {
+    return <Loading message="Searching..." />
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">
-        Search Results for &ldquo;{query}&rdquo;
-        <span className="text-muted-foreground ml-2 text-lg">
-          ({results.length} {results.length === 1 ? 'result' : 'results'})
-        </span>
-      </h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-4xl font-bold">Search Results</h1>
+        <div className="flex gap-2">
+          <Button 
+            variant={type === 'all' ? 'default' : 'outline'}
+            onClick={() => window.location.href = `/search?q=${query}&type=all`}
+          >
+            All
+          </Button>
+          <Button 
+            variant={type === 'chat' ? 'default' : 'outline'}
+            onClick={() => window.location.href = `/search?q=${query}&type=chat`}
+          >
+            Chat Logs
+          </Button>
+          <Button 
+            variant={type === 'composer' ? 'default' : 'outline'}
+            onClick={() => window.location.href = `/search?q=${query}&type=composer`}
+          >
+            Composer Logs
+          </Button>
+        </div>
+      </div>
+
+      <p className="text-muted-foreground">
+        Found {results.length} results for &ldquo;{query}&rdquo;
+      </p>
 
       <div className="space-y-4">
         {results.map((result, index) => (
-          <Card key={index} className="p-4 hover:bg-muted/50">
-            <Link 
-              href={`/workspace/${result.workspaceId}?tab=${result.chatId}`}
-              className="block space-y-2"
-            >
-              <div className="flex items-center justify-between">
-                <h2 className="font-semibold">{result.chatTitle}</h2>
-                <time className="text-sm text-muted-foreground">
-                  {formatDate(result.timestamp)}
-                </time>
+          <Card key={index} className="p-4">
+            <div className="flex items-start justify-between mb-2">
+              <div>
+                <Link
+                  href={`/workspace/${result.workspaceId}?tab=${result.chatId}&type=${result.type}`}
+                  className="text-lg font-medium hover:underline"
+                >
+                  {result.chatTitle}
+                </Link>
+                <div className="text-sm text-muted-foreground mt-1">
+                  {format(new Date(result.timestamp), 'PPpp')}
+                </div>
               </div>
-              
-              <div className="text-sm text-muted-foreground flex items-center gap-2">
-                <span>📁</span>
-                <span className="truncate">{result.workspaceFolder}</span>
+              <Badge variant={result.type === 'chat' ? 'default' : 'secondary'}>
+                {result.type === 'chat' ? 'Chat Log' : 'Composer Log'}
+              </Badge>
+            </div>
+            <div className="text-sm mt-2">{result.matchingText}</div>
+            {result.workspaceFolder && (
+              <div className="text-xs text-muted-foreground mt-2">
+                {result.workspaceFolder}
               </div>
-
-              <p className="text-sm mt-2">
-                {result.matchingText}
-              </p>
-            </Link>
+            )}
           </Card>
         ))}
-
-        {results.length === 0 && (
-          <div className="text-center text-muted-foreground py-8">
-            No results found for &ldquo;{query}&rdquo;
-          </div>
-        )}
       </div>
     </div>
   )

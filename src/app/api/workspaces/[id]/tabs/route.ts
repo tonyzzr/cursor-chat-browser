@@ -2,14 +2,13 @@ import { NextResponse } from "next/server"
 import path from 'path'
 import sqlite3 from 'sqlite3'
 import { open } from 'sqlite'
-import { ChatTab } from "@/types/workspace"
+import { ChatBubble, ChatTab, ComposerData } from "@/types/workspace"
 
 interface RawTab {
   tabId: string;
   chatTitle: string;
   lastSendTime: number;
   bubbles: ChatBubble[];
-  // ... other fields
 }
 
 const safeParseTimestamp = (timestamp: number | undefined): string => {
@@ -37,33 +36,41 @@ export async function GET(
       driver: sqlite3.Database
     })
 
-    const result = await db.get(`
+    const chatResult = await db.get(`
       SELECT value FROM ItemTable 
-      WHERE [key] IN ('workbench.panel.aichat.view.aichat.chatdata')
+      WHERE [key] = 'workbench.panel.aichat.view.aichat.chatdata'
+    `)
+
+    const composerResult = await db.get(`
+      SELECT value FROM ItemTable 
+      WHERE [key] = 'composer.composerData'
     `)
 
     await db.close()
 
-    if (!result) {
+    if (!chatResult && !composerResult) {
       return NextResponse.json({ error: 'No chat data found' }, { status: 404 })
     }
 
-    const chatData = JSON.parse(result.value)
-    
-    const tabs = chatData.tabs.map((tab: RawTab) => {
-      const title = tab.chatTitle?.split('\n')[0] || `Chat ${tab.tabId.slice(0, 8)}`;
-      
-      return {
+    const response: { tabs: ChatTab[], composers?: ComposerData } = { tabs: [] }
+
+    if (chatResult) {
+      const chatData = JSON.parse(chatResult.value)
+      response.tabs = chatData.tabs.map((tab: RawTab) => ({
         id: tab.tabId,
-        title: title,
+        title: tab.chatTitle?.split('\n')[0] || `Chat ${tab.tabId.slice(0, 8)}`,
         timestamp: safeParseTimestamp(tab.lastSendTime),
         bubbles: tab.bubbles
-      };
-    })
+      }))
+    }
+
+    if (composerResult) {
+      response.composers = JSON.parse(composerResult.value)
+    }
     
-    return NextResponse.json(tabs)
+    return NextResponse.json(response)
   } catch (error) {
-    console.error('Failed to get workspace tabs:', error)
-    return NextResponse.json({ error: 'Failed to get workspace tabs' }, { status: 500 })
+    console.error('Failed to get workspace data:', error)
+    return NextResponse.json({ error: 'Failed to get workspace data' }, { status: 500 })
   }
 } 

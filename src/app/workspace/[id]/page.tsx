@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card } from "@/components/ui/card"
@@ -12,12 +12,15 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism'
-import { ChatTab, Workspace } from "@/types/workspace"
+import { ChatTab, Workspace, ComposerChat } from "@/types/workspace"
+import { Badge } from "@/components/ui/badge"
 
 interface WorkspaceState {
   workspace: Workspace | null;
   tabs: ChatTab[];
-  selectedTabId: string | null;
+  composers: ComposerChat[];
+  selectedId: string | null;
+  selectedType: 'chat' | 'composer';
   isLoading: boolean;
 }
 
@@ -26,77 +29,75 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
   const [state, setState] = useState<WorkspaceState>({
     workspace: null,
     tabs: [],
-    selectedTabId: null,
+    composers: [],
+    selectedId: searchParams.get('tab'),
+    selectedType: (searchParams.get('type') as 'chat' | 'composer') || 'chat',
     isLoading: true
   })
 
-  // Get initial tab ID from URL
-  const initialTabId = useMemo(() => searchParams.get('tab'), [])
+  const handleSelect = (id: string, type: 'chat' | 'composer') => {
+    setState(prev => ({ ...prev, selectedId: id, selectedType: type }))
+    const url = new URL(window.location.href)
+    url.searchParams.set('tab', id)
+    url.searchParams.set('type', type)
+    window.history.pushState({}, '', url.toString())
+  }
 
-  // Single fetch function for all workspace data
-  const fetchWorkspaceData = useCallback(async () => {
+  const fetchWorkspace = useCallback(async () => {
     try {
       const [workspaceRes, tabsRes] = await Promise.all([
         fetch(`/api/workspaces/${params.id}`),
         fetch(`/api/workspaces/${params.id}/tabs`)
       ])
 
-      const [workspace, tabs] = await Promise.all([
-        workspaceRes.json(),
-        tabsRes.json()
-      ])
+      const workspace = await workspaceRes.json()
+      const data = await tabsRes.json()
 
-      // Find the requested tab, or default to first tab
-      let selectedId = null
-      if (initialTabId) {
-        const requestedTab = tabs.find((t: ChatTab) => t.id === initialTabId)
-        if (requestedTab) {
-          selectedId = requestedTab.id
-        }
-      }
-      
-      // If no valid tab ID, use first tab
-      if (!selectedId && tabs.length > 0) {
-        selectedId = tabs[0].id
-        // Update URL without triggering navigation
-        const newUrl = new URL(window.location.href)
-        newUrl.searchParams.set('tab', selectedId)
-        window.history.replaceState({}, '', newUrl)
-      }
-
-      setState({
+      setState(prev => ({
+        ...prev,
         workspace,
-        tabs,
-        selectedTabId: selectedId,
+        tabs: data.tabs || [],
+        composers: data.composers?.allComposers || [],
         isLoading: false
-      })
+      }))
     } catch (error) {
-      console.error('Failed to fetch workspace data:', error)
+      console.error('Failed to fetch workspace:', error)
       setState(prev => ({ ...prev, isLoading: false }))
     }
-  }, [params.id, initialTabId]) // Only depend on params.id and initial tab ID
+  }, [params.id])
 
-  // Fetch data only once when component mounts
   useEffect(() => {
-    fetchWorkspaceData()
-  }, [fetchWorkspaceData])
+    fetchWorkspace()
+  }, [fetchWorkspace])
 
-  const handleTabSelect = useCallback((tabId: string) => {
-    setState(prev => ({ ...prev, selectedTabId: tabId }))
-    const newUrl = new URL(window.location.href)
-    newUrl.searchParams.set('tab', tabId)
-    window.history.replaceState({}, '', newUrl)
-  }, []) // No dependencies needed
+  useEffect(() => {
+    if (!state.selectedId) {
+      if (state.tabs.length > 0) {
+        setState(prev => ({ ...prev, selectedId: state.tabs[0].id, selectedType: 'chat' }))
+      } else if (state.composers.length > 0) {
+        setState(prev => ({ ...prev, selectedId: state.composers[0].composerId, selectedType: 'composer' }))
+      }
+    }
+  }, [state.tabs, state.composers, state.selectedId])
 
   if (state.isLoading) {
-    return <Loading message="Loading workspace..." />
+    return <Loading />
   }
 
-  const selectedTab = state.tabs.find(tab => tab.id === state.selectedTabId)
+  if (!state.workspace) {
+    return <div>Workspace not found</div>
+  }
+
+  const selectedChat = state.selectedType === 'chat' 
+    ? state.tabs.find(tab => tab.id === state.selectedId)
+    : null
+
+  const selectedComposer = state.selectedType === 'composer'
+    ? state.composers.find(composer => composer.composerId === state.selectedId)
+    : null
 
   return (
     <div className="space-y-6">
-      {/* Back Button and Title Row */}
       <div className="flex items-center justify-between">
         <Button variant="ghost" size="sm" asChild className="gap-2">
           <Link href="/">
@@ -104,10 +105,20 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
             Back to Workspaces
           </Link>
         </Button>
-        {selectedTab && <DownloadMenu tab={selectedTab} />}
+        {selectedChat && <DownloadMenu tab={selectedChat} />}
+        {selectedComposer && <DownloadMenu tab={{
+          id: selectedComposer.composerId,
+          title: selectedComposer.text || 'Untitled',
+          timestamp: new Date(selectedComposer.lastUpdatedAt).toISOString(),
+          bubbles: selectedComposer.conversation.map(msg => ({
+            type: msg.type === 1 ? 'user' : 'ai',
+            text: msg.text,
+            modelType: msg.type === 2 ? 'Composer Assistant' : undefined,
+            selections: msg.context?.selections || []
+          }))
+        }} />}
       </div>
 
-      {/* Workspace Info */}
       {state.workspace?.folder && (
         <div className="bg-muted/50 dark:bg-muted/10 p-6 rounded-lg border">
           <h2 className="font-semibold mb-2">Workspace Location</h2>
@@ -116,37 +127,71 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
       )}
 
       <div className="grid grid-cols-12 gap-6">
-        {/* Tabs List */}
         <div className="col-span-3 space-y-4">
-          <h2 className="text-2xl font-bold mb-6">Chat Tabs</h2>
-          <div className="space-y-2">
-            {state.tabs.map((tab) => (
-              <Button
-                key={tab.id}
-                variant={selectedTab?.id === tab.id ? "default" : "outline"}
-                className="w-full justify-start px-4 py-3 h-auto"
-                onClick={() => handleTabSelect(tab.id)}
-                title={tab.title}
-              >
-                <div className="text-left w-full">
-                  <div className="font-medium truncate">
-                    {tab.title || `Chat ${tab.id.slice(0, 8)}`}
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold">Chat Logs</h2>
+            <div className="space-y-2">
+              {state.tabs.map((tab) => (
+                <Button
+                  key={tab.id}
+                  variant={state.selectedId === tab.id ? "default" : "outline"}
+                  className="w-full justify-start px-4 py-3 h-auto"
+                  onClick={() => handleSelect(tab.id, 'chat')}
+                  title={tab.title}
+                >
+                  <div className="text-left w-full">
+                    <div className="font-medium truncate">
+                      {tab.title || `Chat ${tab.id.slice(0, 8)}`}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {new Date(tab.timestamp).toLocaleString()}
+                    </div>
                   </div>
-                  <div className="text-sm text-muted-foreground">
-                    {new Date(tab.timestamp).toLocaleString()}
-                  </div>
-                </div>
-              </Button>
-            ))}
+                </Button>
+              ))}
+            </div>
           </div>
+
+          {state.composers.length > 0 && (
+            <div className="space-y-4 mt-8">
+              <h2 className="text-2xl font-bold">Composer Logs</h2>
+              <div className="space-y-2">
+                {state.composers.map((composer) => (
+                  <Button
+                    key={composer.composerId}
+                    variant={state.selectedId === composer.composerId ? "default" : "outline"}
+                    className="w-full justify-start px-4 py-3 h-auto"
+                    onClick={() => handleSelect(composer.composerId, 'composer')}
+                    title={composer.text || 'Untitled'}
+                  >
+                    <div className="text-left w-full">
+                      <div className="font-medium truncate">
+                        {composer.text || `Composer ${composer.composerId.slice(0, 8)}`}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {new Date(composer.lastUpdatedAt).toLocaleString()}
+                      </div>
+                    </div>
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Chat Content */}
         <div className="col-span-9">
-          {selectedTab ? (
+          {(selectedChat || selectedComposer) ? (
             <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold">
+                  {selectedChat?.title || selectedComposer?.text || 'Untitled'}
+                </h2>
+                <Badge variant={state.selectedType === 'chat' ? 'default' : 'secondary'}>
+                  {state.selectedType === 'chat' ? 'Chat Log' : 'Composer Log'}
+                </Badge>
+              </div>
               <div className="space-y-6">
-                {selectedTab.bubbles.map((bubble, index) => (
+                {selectedChat && selectedChat.bubbles.map((bubble, index) => (
                   <div 
                     key={index} 
                     className={`p-4 rounded-lg border ${
@@ -179,20 +224,19 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
                           className="prose dark:prose-invert max-w-none"
                           remarkPlugins={[remarkGfm]}
                           components={{
-                            code({node, inline, className, children, ...props}) {
+                            code({inline, className, children}) {
                               const match = /language-(\w+)/.exec(className || '')
                               const language = match ? match[1] : null
                               
                               if (inline) {
-                                return <code className={className} {...props}>{children}</code>
+                                return <code className={className}>{children}</code>
                               }
 
                               return (
                                 <SyntaxHighlighter
-                                  style={vscDarkPlus}
-                                  language={language || 'text'}
                                   PreTag="div"
-                                  {...props}
+                                  language={language || 'text'}
+                                  style={vscDarkPlus as any}
                                 >
                                   {String(children).replace(/\n$/, '')}
                                 </SyntaxHighlighter>
@@ -206,11 +250,53 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
                     )}
                   </div>
                 ))}
+                {selectedComposer && selectedComposer.conversation.map((message) => (
+                  <div 
+                    key={message.bubbleId}
+                    className={`p-4 rounded-lg border ${
+                      message.type === 1 ? 'bg-muted/50 dark:bg-muted/10' : 'bg-background'
+                    }`}
+                  >
+                    <div className="font-semibold mb-3 text-foreground">
+                      {message.type === 1 ? 'User' : 'AI'}
+                    </div>
+                    {message.text && (
+                      <div className="rounded-lg overflow-hidden">
+                        <ReactMarkdown
+                          className="prose dark:prose-invert max-w-none"
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            code({inline, className, children}) {
+                              const match = /language-(\w+)/.exec(className || '')
+                              const language = match ? match[1] : null
+                              
+                              if (inline) {
+                                return <code className={className}>{children}</code>
+                              }
+
+                              return (
+                                <SyntaxHighlighter
+                                  PreTag="div"
+                                  language={language || 'text'}
+                                  style={vscDarkPlus as any}
+                                >
+                                  {String(children).replace(/\n$/, '')}
+                                </SyntaxHighlighter>
+                              )
+                            }
+                          }}
+                        >
+                          {message.text}
+                        </ReactMarkdown>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             </Card>
           ) : (
             <div className="text-center text-muted-foreground mt-8">
-              Select a tab to view the chat
+              Select a log to view the conversation
             </div>
           )}
         </div>
