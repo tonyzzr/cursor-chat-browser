@@ -111,8 +111,18 @@ export default function ConfigPage() {
       const data = await response.json()
 
       if (data.valid) {
+        // Save to localStorage and cookies
         localStorage.setItem('workspacePath', config.workspacePath)
         document.cookie = `workspacePath=${encodeURIComponent(config.workspacePath)}; path=/`
+        
+        // Update server environment
+        await fetch('/api/set-workspace', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ path: config.workspacePath }),
+        })
         
         setStatus({
           type: 'success',
@@ -157,8 +167,8 @@ export default function ConfigPage() {
           </Button>
           
           {status.type === 'success' && (
-            <Button variant="secondary" onClick={() => router.push('/')}>
-              Go to Workspaces
+            <Button variant="secondary" onClick={() => router.push('/chat')}>
+              Go to Chat Logs
             </Button>
           )}
         </div>

@@ -11,6 +11,8 @@ export function middleware(request: NextRequest) {
       // Redirect to config if no workspace path is set
       return NextResponse.redirect(new URL('/config', request.url))
     }
+    // Redirect root to chat logs
+    return NextResponse.redirect(new URL('/chat', request.url))
   }
 
   return NextResponse.next()

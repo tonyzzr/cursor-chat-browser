@@ -89,9 +89,12 @@ export function WorkspaceList() {
                 </TableCell>
                 <TableCell>
                   {workspace.folder ? (
-                    <div className="flex items-center space-x-2">
-                      <span className="text-gray-500">📁</span>
-                      <span className="truncate max-w-md" title={workspace.folder}>
+                    <div className="flex items-start space-x-2">
+                      <span className="text-gray-500 mt-1">📁</span>
+                      <span 
+                        className="break-all text-sm"
+                        title={workspace.folder}
+                      >
                         {workspace.folder}
                       </span>
                     </div>

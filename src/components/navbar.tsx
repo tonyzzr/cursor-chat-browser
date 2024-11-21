@@ -6,11 +6,12 @@ import { ThemeToggle } from "./theme-toggle"
 import { Settings, Search } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip"
 import { Input } from "./ui/input"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { useState } from "react"
 
 export function Navbar() {
   const router = useRouter()
+  const pathname = usePathname()
   const [searchQuery, setSearchQuery] = useState("")
 
   const handleSearch = (e: React.FormEvent) => {
@@ -41,17 +42,23 @@ export function Navbar() {
         </div>
         
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" asChild>
-            <Link href="/">Workspaces</Link>
-          </Button>
+          <div className="relative">
+            <Button variant="ghost" asChild>
+              <Link href="/chat">Chat Logs</Link>
+            </Button>
+            {pathname.startsWith('/chat') && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground" />
+            )}
+          </div>
           
-          <Button variant="ghost" asChild>
-            <Link href="/chat">Chat Logs</Link>
-          </Button>
-          
-          <Button variant="ghost" asChild>
-            <Link href="/composer">Composer Logs</Link>
-          </Button>
+          <div className="relative">
+            <Button variant="ghost" asChild>
+              <Link href="/composer">Composer Logs</Link>
+            </Button>
+            {pathname.startsWith('/composer') && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground" />
+            )}
+          </div>
           
           <Tooltip>
             <TooltipTrigger asChild>
