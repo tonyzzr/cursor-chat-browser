@@ -100,9 +100,9 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <Button variant="ghost" size="sm" asChild className="gap-2">
-          <Link href="/">
+          <Link href="/chat">
             <ArrowLeft className="w-4 h-4" />
-            Back to Workspaces
+            Back to Chat Logs
           </Link>
         </Button>
         {selectedChat && <DownloadMenu tab={selectedChat} />}
@@ -203,12 +203,12 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
                     <div className="font-semibold mb-3 text-foreground">
                       {bubble.type === 'ai' ? `AI (${bubble.modelType})` : 'User'}
                     </div>
-                    {bubble.selections?.length > 0 && (
+                    {(bubble.selections?.length ?? 0) > 0 && (
                       <div className="mb-4">
                         <div className="font-medium text-sm text-muted-foreground mb-2">
                           Selections:
                         </div>
-                        {bubble.selections.map((selection, idx) => (
+                        {bubble.selections?.map((selection, idx) => (
                           <pre 
                             key={idx} 
                             className="bg-muted/50 dark:bg-muted/10 mt-2 text-sm"
@@ -224,7 +224,7 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
                           className="prose dark:prose-invert max-w-none"
                           remarkPlugins={[remarkGfm]}
                           components={{
-                            code({inline, className, children}) {
+                            code({inline, className, children, ...props}: any) {
                               const match = /language-(\w+)/.exec(className || '')
                               const language = match ? match[1] : null
                               
@@ -266,7 +266,7 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
                           className="prose dark:prose-invert max-w-none"
                           remarkPlugins={[remarkGfm]}
                           components={{
-                            code({inline, className, children}) {
+                            code({inline, className, children, ...props}: any) {
                               const match = /language-(\w+)/.exec(className || '')
                               const language = match ? match[1] : null
                               
