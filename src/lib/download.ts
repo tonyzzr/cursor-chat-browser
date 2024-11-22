@@ -151,3 +151,8 @@ export async function downloadPDF(tab: ChatTab) {
     alert('Failed to generate PDF. This feature is not yet implemented.')
   }
 }
+
+export function copyMarkdown(tab: ChatTab) {
+  const markdown = convertChatToMarkdown(tab)
+  navigator.clipboard.writeText(markdown)
+}
