@@ -14,6 +14,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism'
 import { ChatTab, Workspace, ComposerChat } from "@/types/workspace"
 import { Badge } from "@/components/ui/badge"
+import { CopyButton } from "@/components/copy-button"
 
 interface WorkspaceState {
   workspace: Workspace | null;
@@ -99,24 +100,29 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <Button variant="ghost" size="sm" asChild className="gap-2">
-          <Link href="/chat">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Chat Logs
-          </Link>
-        </Button>
-        {selectedChat && <DownloadMenu tab={selectedChat} />}
-        {selectedComposer && <DownloadMenu tab={{
-          id: selectedComposer.composerId,
-          title: selectedComposer.text || 'Untitled',
-          timestamp: new Date(selectedComposer.lastUpdatedAt).toISOString(),
-          bubbles: selectedComposer.conversation.map(msg => ({
-            type: msg.type === 1 ? 'user' : 'ai',
-            text: msg.text,
-            modelType: msg.type === 2 ? 'Composer Assistant' : undefined,
-            selections: msg.context?.selections || []
-          }))
-        }} />}
+        <div className="flex justify-between w-full">
+          <Button variant="ghost" size="sm" asChild className="gap-2">
+            <Link href="/chat">
+              <ArrowLeft className="w-4 h-4" />
+              Back to Chat Logs
+            </Link>
+          </Button>
+          <div className="flex gap-2">
+            {selectedChat && <CopyButton tab={selectedChat} />}
+            {selectedChat && <DownloadMenu tab={selectedChat} />}
+            {selectedComposer && <DownloadMenu tab={{
+              id: selectedComposer.composerId,
+              title: selectedComposer.text || 'Untitled',
+              timestamp: new Date(selectedComposer.lastUpdatedAt).toISOString(),
+              bubbles: selectedComposer.conversation.map(msg => ({
+                type: msg.type === 1 ? 'user' : 'ai',
+                text: msg.text,
+                modelType: msg.type === 2 ? 'Composer Assistant' : undefined,
+                selections: msg.context?.selections || []
+              }))
+            }} />}
+          </div>
+        </div>
       </div>
 
       {state.workspace?.folder && (

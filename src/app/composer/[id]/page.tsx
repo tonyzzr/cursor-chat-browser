@@ -12,6 +12,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism'
 import { Loading } from "@/components/ui/loading"
 import { DownloadMenu } from "@/components/download-menu"
+import { CopyButton } from "@/components/copy-button"
 
 interface ComposerDetailProps {
   params: {
@@ -67,13 +68,18 @@ export default function ComposerDetail({ params }: ComposerDetailProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <Button variant="ghost" size="sm" asChild>
-          <Link href="/composer">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Link>
-        </Button>
-        <DownloadMenu tab={composerTab} />
+        <div className="flex w-full">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/composer">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Link>
+          </Button>
+          <div className="flex gap-2 ml-auto">
+            <CopyButton tab={composerTab} />
+            <DownloadMenu tab={composerTab} />
+          </div>
+        </div>
       </div>
 
       <div className="space-y-4">
