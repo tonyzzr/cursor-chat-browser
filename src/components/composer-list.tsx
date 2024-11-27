@@ -91,7 +91,7 @@ export function ComposerList() {
                 {format(composer.lastUpdatedAt || composer.createdAt || Date.now(), 'PPP p')}
               </TableCell>
               <TableCell className="text-right">
-                {composer.conversation.length}
+                {composer.conversation?.length || 0}
               </TableCell>
             </TableRow>
           ))}

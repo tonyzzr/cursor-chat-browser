@@ -103,11 +103,13 @@ export async function GET(request: Request) {
                 }
 
                 // Search in conversation
-                for (const message of composer.conversation) {
-                  if (message.text?.toLowerCase().includes(query.toLowerCase())) {
-                    hasMatch = true
-                    matchingText = message.text
-                    break
+                if (Array.isArray(composer.conversation)) {
+                  for (const message of composer.conversation) {
+                    if (message.text?.toLowerCase().includes(query.toLowerCase())) {
+                      hasMatch = true
+                      matchingText = message.text
+                      break
+                    }
                   }
                 }
 
@@ -117,7 +119,7 @@ export async function GET(request: Request) {
                     workspaceFolder,
                     chatId: composer.composerId,
                     chatTitle: composer.text || `Composer ${composer.composerId.substring(0, 8)}`,
-                    timestamp: new Date().toISOString(), // Add timestamp to composer data if available
+                    timestamp: composer.lastUpdatedAt || composer.createdAt || new Date().toISOString(),
                     matchingText,
                     type: 'composer'
                   })

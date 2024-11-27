@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card } from "@/components/ui/card"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, ExternalLink } from "lucide-react"
 import Link from "next/link"
 import { Loading } from "@/components/ui/loading"
 import { DownloadMenu } from "@/components/download-menu"
@@ -80,6 +80,12 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
       }
     }
   }, [state.tabs, state.composers, state.selectedId])
+
+  const handleOpenInCursor = () => {
+    // Cursor protocol handler URL
+    const cursorUrl = `cursor://workspace/${params.id}`
+    window.open(cursorUrl, '_blank')
+  }
 
   if (state.isLoading) {
     return <Loading />
