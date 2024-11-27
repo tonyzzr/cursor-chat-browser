@@ -74,9 +74,12 @@ export function ComposerList() {
               </TableCell>
               <TableCell>
                 {composer.workspaceFolder ? (
-                  <div className="flex items-center space-x-2">
-                    <span className="text-gray-500">📁</span>
-                    <span className="truncate max-w-md" title={composer.workspaceFolder}>
+                  <div className="flex items-start space-x-2">
+                    <span className="text-gray-500 mt-1">📁</span>
+                    <span 
+                      className="break-all text-sm"
+                      title={composer.workspaceFolder}
+                    >
                       {composer.workspaceFolder}
                     </span>
                   </div>

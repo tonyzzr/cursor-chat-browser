@@ -14,6 +14,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism'
 import { ChatTab, Workspace, ComposerChat } from "@/types/workspace"
 import { Badge } from "@/components/ui/badge"
+import { CopyButton } from "@/components/copy-button"
 
 interface WorkspaceState {
   workspace: Workspace | null;
@@ -105,34 +106,28 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <Button variant="ghost" size="sm" asChild className="gap-2">
-          <Link href="/">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Workspaces
-          </Link>
-        </Button>
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleOpenInCursor}
-            className="gap-2"
-          >
-            <ExternalLink className="h-4 w-4" />
-            Open in Cursor
+        <div className="flex justify-between w-full">
+          <Button variant="ghost" size="sm" asChild className="gap-2">
+            <Link href="/chat">
+              <ArrowLeft className="w-4 h-4" />
+              Back to Chat Logs
+            </Link>
           </Button>
-          {selectedChat && <DownloadMenu tab={selectedChat} />}
-          {selectedComposer && <DownloadMenu tab={{
-            id: selectedComposer.composerId,
-            title: selectedComposer.text || 'Untitled',
-            timestamp: new Date(selectedComposer.lastUpdatedAt).toISOString(),
-            bubbles: selectedComposer.conversation.map(msg => ({
-              type: msg.type === 1 ? 'user' : 'ai',
-              text: msg.text,
-              modelType: msg.type === 2 ? 'Composer Assistant' : undefined,
-              selections: msg.context?.selections || []
-            }))
-          }} />}
+          <div className="flex gap-2">
+            {selectedChat && <CopyButton tab={selectedChat} />}
+            {selectedChat && <DownloadMenu tab={selectedChat} />}
+            {selectedComposer && <DownloadMenu tab={{
+              id: selectedComposer.composerId,
+              title: selectedComposer.text || 'Untitled',
+              timestamp: new Date(selectedComposer.lastUpdatedAt).toISOString(),
+              bubbles: selectedComposer.conversation.map(msg => ({
+                type: msg.type === 1 ? 'user' : 'ai',
+                text: msg.text,
+                modelType: msg.type === 2 ? 'Composer Assistant' : undefined,
+                selections: msg.context?.selections || []
+              }))
+            }} />}
+          </div>
         </div>
       </div>
 
@@ -220,12 +215,12 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
                     <div className="font-semibold mb-3 text-foreground">
                       {bubble.type === 'ai' ? `AI (${bubble.modelType})` : 'User'}
                     </div>
-                    {bubble.selections?.length > 0 && (
+                    {(bubble.selections?.length ?? 0) > 0 && (
                       <div className="mb-4">
                         <div className="font-medium text-sm text-muted-foreground mb-2">
                           Selections:
                         </div>
-                        {bubble.selections.map((selection, idx) => (
+                        {bubble.selections?.map((selection, idx) => (
                           <pre 
                             key={idx} 
                             className="bg-muted/50 dark:bg-muted/10 mt-2 text-sm"
@@ -241,7 +236,7 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
                           className="prose dark:prose-invert max-w-none"
                           remarkPlugins={[remarkGfm]}
                           components={{
-                            code({inline, className, children}) {
+                            code({inline, className, children, ...props}: any) {
                               const match = /language-(\w+)/.exec(className || '')
                               const language = match ? match[1] : null
                               
@@ -283,7 +278,7 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
                           className="prose dark:prose-invert max-w-none"
                           remarkPlugins={[remarkGfm]}
                           components={{
-                            code({inline, className, children}) {
+                            code({inline, className, children, ...props}: any) {
                               const match = /language-(\w+)/.exec(className || '')
                               const language = match ? match[1] : null
                               
