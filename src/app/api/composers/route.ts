@@ -41,9 +41,10 @@ export async function GET() {
         
         if (result?.value) {
           const composerData = JSON.parse(result.value) as ComposerData
-          // Add workspace info to each composer
+          // Add workspace info to each composer and ensure conversation exists
           const composersWithWorkspace = composerData.allComposers.map(composer => ({
             ...composer,
+            conversation: composer.conversation || [],  // Provide default empty array
             workspaceId: entry.name,
             workspaceFolder
           }))

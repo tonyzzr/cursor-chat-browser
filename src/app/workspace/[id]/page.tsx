@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card } from "@/components/ui/card"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, ExternalLink } from "lucide-react"
 import Link from "next/link"
 import { Loading } from "@/components/ui/loading"
 import { DownloadMenu } from "@/components/download-menu"
@@ -80,6 +80,12 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
     }
   }, [state.tabs, state.composers, state.selectedId])
 
+  const handleOpenInCursor = () => {
+    // Cursor protocol handler URL
+    const cursorUrl = `cursor://workspace/${params.id}`
+    window.open(cursorUrl, '_blank')
+  }
+
   if (state.isLoading) {
     return <Loading />
   }
@@ -105,18 +111,29 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
             Back to Workspaces
           </Link>
         </Button>
-        {selectedChat && <DownloadMenu tab={selectedChat} />}
-        {selectedComposer && <DownloadMenu tab={{
-          id: selectedComposer.composerId,
-          title: selectedComposer.text || 'Untitled',
-          timestamp: new Date(selectedComposer.lastUpdatedAt).toISOString(),
-          bubbles: selectedComposer.conversation.map(msg => ({
-            type: msg.type === 1 ? 'user' : 'ai',
-            text: msg.text,
-            modelType: msg.type === 2 ? 'Composer Assistant' : undefined,
-            selections: msg.context?.selections || []
-          }))
-        }} />}
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleOpenInCursor}
+            className="gap-2"
+          >
+            <ExternalLink className="h-4 w-4" />
+            Open in Cursor
+          </Button>
+          {selectedChat && <DownloadMenu tab={selectedChat} />}
+          {selectedComposer && <DownloadMenu tab={{
+            id: selectedComposer.composerId,
+            title: selectedComposer.text || 'Untitled',
+            timestamp: new Date(selectedComposer.lastUpdatedAt).toISOString(),
+            bubbles: selectedComposer.conversation.map(msg => ({
+              type: msg.type === 1 ? 'user' : 'ai',
+              text: msg.text,
+              modelType: msg.type === 2 ? 'Composer Assistant' : undefined,
+              selections: msg.context?.selections || []
+            }))
+          }} />}
+        </div>
       </div>
 
       {state.workspace?.folder && (

@@ -77,7 +77,7 @@ export interface ComposerMessage {
 
 export interface ComposerChat {
   composerId: string;
-  conversation: ComposerMessage[];
+  conversation?: ComposerMessage[];
   richText: string;
   text: string;
   status: string;
