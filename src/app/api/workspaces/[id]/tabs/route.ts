@@ -37,12 +37,12 @@ export async function GET(
     })
 
     const chatResult = await db.get(`
-      SELECT value FROM ItemTable 
+      SELECT value FROM ItemTable
       WHERE [key] = 'workbench.panel.aichat.view.aichat.chatdata'
     `)
 
     const composerResult = await db.get(`
-      SELECT value FROM ItemTable 
+      SELECT value FROM ItemTable
       WHERE [key] = 'composer.composerData'
     `)
 
@@ -65,12 +65,32 @@ export async function GET(
     }
 
     if (composerResult) {
-      response.composers = JSON.parse(composerResult.value)
+      const globalDbPath = path.join(workspacePath, '..', 'globalStorage', 'state.vscdb')
+      const composers: ComposerData = JSON.parse(composerResult.value)
+      const keys = composers.allComposers.map((it) => `composerData:${it.composerId}`)
+      const placeholders = keys.map(() => '?').join(',')
+
+      const globalDb = await open({
+        filename: globalDbPath,
+        driver: sqlite3.Database
+      })
+
+      const composersBodyResult = await globalDb.all(`
+        SELECT value FROM cursorDiskKV
+        WHERE [key] in (${placeholders})
+      `, keys)
+
+      await globalDb.close()
+
+      if (composersBodyResult) {
+        composers.allComposers = composersBodyResult.map((it) => JSON.parse(it.value))
+        response.composers = composers
+      }
     }
-    
+
     return NextResponse.json(response)
   } catch (error) {
     console.error('Failed to get workspace data:', error)
     return NextResponse.json({ error: 'Failed to get workspace data' }, { status: 500 })
   }
-} 
+}
