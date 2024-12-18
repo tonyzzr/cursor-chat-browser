@@ -95,7 +95,7 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
     return <div>Workspace not found</div>
   }
 
-  const selectedChat = state.selectedType === 'chat' 
+  const selectedChat = state.selectedType === 'chat'
     ? state.tabs.find(tab => tab.id === state.selectedId)
     : null
 
@@ -119,7 +119,7 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
             {selectedComposer && <DownloadMenu tab={{
               id: selectedComposer.composerId,
               title: selectedComposer.text || 'Untitled',
-              timestamp: new Date(selectedComposer.lastUpdatedAt).toISOString(),
+              timestamp: new Date(selectedComposer.lastUpdatedAt || selectedComposer.createdAt).toISOString(),
               bubbles: selectedComposer.conversation.map(msg => ({
                 type: msg.type === 1 ? 'user' : 'ai',
                 text: msg.text,
@@ -174,14 +174,14 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
                     variant={state.selectedId === composer.composerId ? "default" : "outline"}
                     className="w-full justify-start px-4 py-3 h-auto"
                     onClick={() => handleSelect(composer.composerId, 'composer')}
-                    title={composer.text || 'Untitled'}
+                    title={composer.name || 'Untitled'}
                   >
                     <div className="text-left w-full">
                       <div className="font-medium truncate">
-                        {composer.text || `Composer ${composer.composerId.slice(0, 8)}`}
+                        {composer.name || `Composer ${composer.composerId.slice(0, 8)}`}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {new Date(composer.lastUpdatedAt).toLocaleString()}
+                        {new Date(composer.lastUpdatedAt || composer.createdAt).toLocaleString()}
                       </div>
                     </div>
                   </Button>
@@ -204,11 +204,11 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
               </div>
               <div className="space-y-6">
                 {selectedChat && selectedChat.bubbles.map((bubble, index) => (
-                  <div 
-                    key={index} 
+                  <div
+                    key={index}
                     className={`p-4 rounded-lg border ${
-                      bubble.type === 'ai' 
-                        ? 'bg-muted/50 dark:bg-muted/10' 
+                      bubble.type === 'ai'
+                        ? 'bg-muted/50 dark:bg-muted/10'
                         : 'bg-background'
                     }`}
                   >
@@ -221,8 +221,8 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
                           Selections:
                         </div>
                         {bubble.selections?.map((selection, idx) => (
-                          <pre 
-                            key={idx} 
+                          <pre
+                            key={idx}
                             className="bg-muted/50 dark:bg-muted/10 mt-2 text-sm"
                           >
                             <code>{selection.text}</code>
@@ -239,7 +239,7 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
                             code({inline, className, children, ...props}: any) {
                               const match = /language-(\w+)/.exec(className || '')
                               const language = match ? match[1] : null
-                              
+
                               if (inline) {
                                 return <code className={className}>{children}</code>
                               }
@@ -263,7 +263,7 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
                   </div>
                 ))}
                 {selectedComposer && selectedComposer.conversation.map((message) => (
-                  <div 
+                  <div
                     key={message.bubbleId}
                     className={`p-4 rounded-lg border ${
                       message.type === 1 ? 'bg-muted/50 dark:bg-muted/10' : 'bg-background'
@@ -281,7 +281,7 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
                             code({inline, className, children, ...props}: any) {
                               const match = /language-(\w+)/.exec(className || '')
                               const language = match ? match[1] : null
-                              
+
                               if (inline) {
                                 return <code className={className}>{children}</code>
                               }
@@ -315,4 +315,4 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
       </div>
     </div>
   )
-} 
+}

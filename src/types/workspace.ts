@@ -84,6 +84,7 @@ export interface ComposerChat {
   context: ComposerContext;
   lastUpdatedAt: number;
   createdAt: number;
+  name: string;
 }
 
 export interface ComposerData {
@@ -98,4 +99,4 @@ export interface MarkdownCodeProps {
   inline?: boolean;
   className?: string;
   children: React.ReactNode;
-} 
+}
