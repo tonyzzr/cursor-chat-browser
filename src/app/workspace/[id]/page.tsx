@@ -230,7 +230,7 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
                         ))}
                       </div>
                     )}
-                    {bubble.text && (
+                    {bubble.text ? (
                       <div className="rounded-lg overflow-hidden">
                         <ReactMarkdown
                           className="prose dark:prose-invert max-w-none"
@@ -259,10 +259,19 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
                           {bubble.text}
                         </ReactMarkdown>
                       </div>
-                    )}
+                    ) : bubble.type === 'ai' ? (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-muted/20 dark:bg-muted/5 rounded border border-muted/30 text-muted-foreground">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-50">
+                          <path d="M2 3.5C2 2.67157 2.67157 2 3.5 2H12.5C13.3284 2 14 2.67157 14 3.5V12.5C14 13.3284 13.3284 14 12.5 14H3.5C2.67157 14 2 13.3284 2 12.5V3.5Z" stroke="currentColor" strokeWidth="1.3"/>
+                          <path d="M4 5L7 8L4 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M8 11H12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                        </svg>
+                        Terminal output not included
+                      </div>
+                    ) : null}
                   </div>
                 ))}
-                {selectedComposer && selectedComposer.conversation.map((message) => (
+                {selectedComposer?.conversation && selectedComposer.conversation!.map((message) => (
                   <div
                     key={message.bubbleId}
                     className={`p-4 rounded-lg border ${
@@ -272,7 +281,7 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
                     <div className="font-semibold mb-3 text-foreground">
                       {message.type === 1 ? 'User' : 'AI'}
                     </div>
-                    {message.text && (
+                    {message.text ? (
                       <div className="rounded-lg overflow-hidden">
                         <ReactMarkdown
                           className="prose dark:prose-invert max-w-none"
@@ -301,7 +310,16 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
                           {message.text}
                         </ReactMarkdown>
                       </div>
-                    )}
+                    ) : message.type !== 1 ? (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-muted/20 dark:bg-muted/5 rounded border border-muted/30 text-muted-foreground">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-50">
+                          <path d="M2 3.5C2 2.67157 2.67157 2 3.5 2H12.5C13.3284 2 14 2.67157 14 3.5V12.5C14 13.3284 13.3284 14 12.5 14H3.5C2.67157 14 2 13.3284 2 12.5V3.5Z" stroke="currentColor" strokeWidth="1.3"/>
+                          <path d="M4 5L7 8L4 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M8 11H12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                        </svg>
+                        Terminal output not included
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               </div>

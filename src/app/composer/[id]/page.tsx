@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import { ComposerChat } from '@/types/workspace'
+import { ComposerChat, ChatTab } from '@/types/workspace'
 import { Card } from '@/components/ui/card'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
@@ -53,15 +53,15 @@ export default function ComposerDetail({ params }: ComposerDetailProps) {
   }
 
   // Convert composer data to ChatTab format for DownloadMenu
-  const composerTab = {
+  const composerTab: ChatTab = {
     id: composer.composerId,
-    title: composer.text || 'Untitled',
-    timestamp: composer.lastUpdatedAt ? new Date(composer.lastUpdatedAt).toISOString() : new Date().toISOString(),
-    bubbles: composer.conversation.map(msg => ({
+    title: composer.name,
+    timestamp: new Date(composer.createdAt).toISOString(),
+    bubbles: (composer.conversation || []).map(msg => ({
       type: msg.type === 1 ? 'user' : 'ai',
       text: msg.text,
-      modelType: msg.type === 2 ? 'Composer Assistant' : undefined,
-      selections: msg.context?.selections || []
+      modelType: 'Claude',
+      selections: msg.context.selections || []
     }))
   }
 
@@ -83,7 +83,7 @@ export default function ComposerDetail({ params }: ComposerDetailProps) {
       </div>
 
       <div className="space-y-4">
-        {composer.conversation.map((message) => (
+        {composer.conversation?.map((message) => (
           <Card key={message.bubbleId} className="p-4">
             <div className="font-semibold mb-3 text-foreground">
               {message.type === 1 ? 'User' : 'AI'}
@@ -103,31 +103,38 @@ export default function ComposerDetail({ params }: ComposerDetailProps) {
                 ))}
               </div>
             )}
-            <div className="prose dark:prose-invert max-w-none">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  code({ className, children, ...props }: CodeProps) {
-                    const match = /language-(\w+)/.exec(className || '')
-                    return match ? (
-                      <SyntaxHighlighter
-                        style={vscDarkPlus}
-                        language={match[1]}
-                        PreTag="div"
-                      >
-                        {String(children).replace(/\n$/, '')}
-                      </SyntaxHighlighter>
-                    ) : (
-                      <code className={className} {...props}>
-                        {children}
-                      </code>
-                    )
-                  }
-                }}
-              >
-                {message.text}
-              </ReactMarkdown>
-            </div>
+            {message.text ? (
+              <div className="rounded-lg overflow-hidden">
+                <ReactMarkdown
+                  className="prose dark:prose-invert max-w-none"
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    code({inline, className, children, ...props}: any) {
+                      const match = /language-(\w+)/.exec(className || '')
+                      const language = match ? match[1] : null
+
+                      if (inline) {
+                        return <code className={className}>{children}</code>
+                      }
+
+                      return (
+                        <SyntaxHighlighter
+                          PreTag="div"
+                          language={language || 'text'}
+                          style={vscDarkPlus as any}
+                        >
+                          {String(children).replace(/\n$/, '')}
+                        </SyntaxHighlighter>
+                      )
+                    }
+                  }}
+                >
+                  {message.text}
+                </ReactMarkdown>
+              </div>
+            ) : message.type === 2 ? (
+              <div className="text-muted-foreground italic">[TERMINAL OUTPUT NOT INCLUDED]</div>
+            ) : null}
           </Card>
         ))}
       </div>
