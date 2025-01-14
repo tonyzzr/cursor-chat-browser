@@ -97,7 +97,6 @@ export default function ConfigPage() {
   const validateAndSave = async () => {
     try {
       const expandedPath = expandTildePath(config.workspacePath)
-      console.log('Sending path for validation:', expandedPath)
       
       const response = await fetch('/api/validate-path', {
         method: 'POST',
