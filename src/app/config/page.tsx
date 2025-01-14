@@ -19,6 +19,17 @@ async function detectEnvironment(): Promise<{ os: string, isWSL: boolean }> {
   }
 }
 
+async function getWindowsUsername(): Promise<string> {
+  try {
+    const response = await fetch('/api/get-username')
+    const data = await response.json()
+    return data.username || 'YOUR_USERNAME'
+  } catch (error) {
+    console.error('Failed to get username:', error)
+    return 'YOUR_USERNAME'
+  }
+}
+
 export default function ConfigPage() {
   const router = useRouter()
   const [config, setConfig] = useState({
@@ -40,12 +51,13 @@ export default function ConfigPage() {
 
       // Detect environment and set path
       const { os, isWSL } = await detectEnvironment()
+      const detectedUsername = await getWindowsUsername()
       let detectedPath = ''
       
       if (isWSL) {
-        detectedPath = '/mnt/c/Users/AppData/Roaming/Cursor/User/workspaceStorage'
+        detectedPath = `/mnt/c/Users/${detectedUsername}/AppData/Roaming/Cursor/User/workspaceStorage`
       } else if (os === 'win32') {
-        detectedPath = `C:\\Users\\AppData\\Roaming\\Cursor\\User\\workspaceStorage`
+        detectedPath = `C:\\Users\\${detectedUsername}\\AppData\\Roaming\\Cursor\\User\\workspaceStorage`
       } else if (os === 'darwin') {
         detectedPath = '~/Library/Application Support/Cursor/User/workspaceStorage'
       } else if (os === 'linux') {
