@@ -4,20 +4,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useState, useEffect } from "react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle, Check } from "lucide-react"
+import { AlertCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
-
-// Function to get the Windows username through WSL or native Windows
-async function getWindowsUsername(): Promise<string> {
-  try {
-    const response = await fetch('/api/get-username')
-    const data = await response.json()
-    return data.username || 'YOUR_USERNAME'
-  } catch (error) {
-    console.error('Failed to get username:', error)
-    return 'YOUR_USERNAME'
-  }
-}
+import { expandTildePath } from "@/utils/path"
 
 // Function to detect OS and WSL
 async function detectEnvironment(): Promise<{ os: string, isWSL: boolean }> {
@@ -35,7 +24,6 @@ export default function ConfigPage() {
   const [config, setConfig] = useState({
     workspacePath: ''
   })
-  const [username, setUsername] = useState<string>('YOUR_USERNAME')
   const [status, setStatus] = useState<{
     type: 'error' | 'success' | null;
     message: string;
@@ -52,14 +40,12 @@ export default function ConfigPage() {
 
       // Detect environment and set path
       const { os, isWSL } = await detectEnvironment()
-      const detectedUsername = await getWindowsUsername()
-      setUsername(detectedUsername)
-
       let detectedPath = ''
+      
       if (isWSL) {
-        detectedPath = `/mnt/c/Users/${detectedUsername}/AppData/Roaming/Cursor/User/workspaceStorage`
+        detectedPath = '/mnt/c/Users/AppData/Roaming/Cursor/User/workspaceStorage'
       } else if (os === 'win32') {
-        detectedPath = `C:\\Users\\${detectedUsername}\\AppData\\Roaming\\Cursor\\User\\workspaceStorage`
+        detectedPath = `C:\\Users\\AppData\\Roaming\\Cursor\\User\\workspaceStorage`
       } else if (os === 'darwin') {
         detectedPath = '~/Library/Application Support/Cursor/User/workspaceStorage'
       } else if (os === 'linux') {
@@ -69,20 +55,20 @@ export default function ConfigPage() {
       // Try to validate the detected path
       if (detectedPath) {
         try {
+          const expandedPath = expandTildePath(detectedPath)
           const response = await fetch('/api/validate-path', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ path: detectedPath }),
+            body: JSON.stringify({ path: expandedPath }),
           })
 
           const data = await response.json()
 
           if (data.valid) {
-            // Path is valid, save it and redirect
-            localStorage.setItem('workspacePath', detectedPath)
-            document.cookie = `workspacePath=${encodeURIComponent(detectedPath)}; path=/`
+            localStorage.setItem('workspacePath', expandedPath)
+            document.cookie = `workspacePath=${encodeURIComponent(expandedPath)}; path=/`
             router.push('/')
             return
           }
@@ -90,8 +76,6 @@ export default function ConfigPage() {
           console.error('Failed to validate detected path:', error)
         }
       }
-
-      // If we get here, either no path was detected or validation failed
       setConfig({ workspacePath: detectedPath })
     }
 
@@ -100,41 +84,47 @@ export default function ConfigPage() {
 
   const validateAndSave = async () => {
     try {
+      const expandedPath = expandTildePath(config.workspacePath)
+      console.log('Sending path for validation:', expandedPath)
+      
       const response = await fetch('/api/validate-path', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ path: config.workspacePath }),
+        body: JSON.stringify({ path: expandedPath }),
       })
 
       const data = await response.json()
 
       if (data.valid) {
-        // Save to localStorage and cookies
-        localStorage.setItem('workspacePath', config.workspacePath)
-        document.cookie = `workspacePath=${encodeURIComponent(config.workspacePath)}; path=/`
+        localStorage.setItem('workspacePath', expandedPath)
+        document.cookie = `workspacePath=${encodeURIComponent(expandedPath)}; path=/`
         
-        // Update server environment
         await fetch('/api/set-workspace', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ path: config.workspacePath }),
+          body: JSON.stringify({ path: expandedPath }),
         })
         
         setStatus({
           type: 'success',
           message: `Found ${data.workspaceCount} workspaces in the specified location`
         })
+        
+        setTimeout(() => {
+          router.push('/chat')
+        }, 1000)
       } else {
         setStatus({
           type: 'error',
           message: 'No workspaces found in the specified location'
         })
       }
-    } catch {
+    } catch (error) {
+      console.error('Validation error:', error)
       setStatus({
         type: 'error',
         message: 'Failed to validate path. Please check if the path exists and is accessible.'
@@ -161,16 +151,17 @@ export default function ConfigPage() {
           </p>
         </div>
 
+        {status.type && (
+          <Alert variant={status.type === 'error' ? 'destructive' : 'default'}>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{status.message}</AlertDescription>
+          </Alert>
+        )}
+
         <div className="flex gap-4">
           <Button onClick={validateAndSave}>
             Save Configuration
           </Button>
-          
-          {status.type === 'success' && (
-            <Button variant="secondary" onClick={() => router.push('/chat')}>
-              Go to Chat Logs
-            </Button>
-          )}
         </div>
       </div>
     </div>
