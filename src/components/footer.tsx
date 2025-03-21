@@ -7,7 +7,7 @@ export function Footer() {
       <div className="container mx-auto py-6">
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
-            <p>© 2024 Cursor Chat Browser. MIT License.</p>
+            <p>© 2025 Cursor Chat Browser. MIT License.</p>
           </div>
           <div className="flex items-center space-x-6">
             <Link 

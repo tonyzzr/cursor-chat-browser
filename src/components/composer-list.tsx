@@ -47,7 +47,7 @@ export function ComposerList() {
   }, [])
 
   if (isLoading) {
-    return <Loading message="Loading composer logs..." />
+    return <Loading message="Loading agent logs..." />
   }
 
   return (

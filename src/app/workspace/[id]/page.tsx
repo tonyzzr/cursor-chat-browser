@@ -110,7 +110,7 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
           <Button variant="ghost" size="sm" asChild className="gap-2">
             <Link href="/chat">
               <ArrowLeft className="w-4 h-4" />
-              Back to Chat Logs
+              Back to Ask Logs
             </Link>
           </Button>
           <div className="flex gap-2">
@@ -141,7 +141,7 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
       <div className="grid grid-cols-12 gap-6">
         <div className="col-span-3 space-y-4">
           <div className="space-y-4">
-            <h2 className="text-2xl font-bold">Chat Logs</h2>
+            <h2 className="text-2xl font-bold">Ask Logs</h2>
             <div className="space-y-2">
               {state.tabs.map((tab) => (
                 <Button
@@ -166,7 +166,7 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
 
           {state.composers.length > 0 && (
             <div className="space-y-4 mt-8">
-              <h2 className="text-2xl font-bold">Composer Logs</h2>
+              <h2 className="text-2xl font-bold">Agent Logs</h2>
               <div className="space-y-2">
                 {state.composers.map((composer) => (
                   <Button
@@ -199,7 +199,7 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
                   {selectedChat?.title || selectedComposer?.text || 'Untitled'}
                 </h2>
                 <Badge variant={state.selectedType === 'chat' ? 'default' : 'secondary'}>
-                  {state.selectedType === 'chat' ? 'Chat Log' : 'Composer Log'}
+                  {state.selectedType === 'chat' ? 'Ask Log' : 'Agent Log'}
                 </Badge>
               </div>
               <div className="space-y-6">
