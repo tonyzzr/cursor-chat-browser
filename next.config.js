@@ -1,8 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    serverActions: true,
-  },
+  // Server Actions are available by default now, removed experimental flag
 }
 
 module.exports = nextConfig 
