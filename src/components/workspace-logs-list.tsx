@@ -72,7 +72,7 @@ export function WorkspaceLogsList() {
             </TableCell>
             <TableCell>
               <Badge variant={log.type === 'chat' ? 'default' : 'secondary'}>
-                {log.type === 'chat' ? 'Chat Log' : 'Composer Log'}
+                {log.type === 'chat' ? 'Ask Log' : 'Agent Log'}
               </Badge>
             </TableCell>
             <TableCell>

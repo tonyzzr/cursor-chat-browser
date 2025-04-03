@@ -66,13 +66,13 @@ export default function SearchPage() {
             variant={type === 'chat' ? 'default' : 'outline'}
             onClick={() => window.location.href = `/search?q=${query}&type=chat`}
           >
-            Chat Logs
+            Ask Logs
           </Button>
           <Button 
             variant={type === 'composer' ? 'default' : 'outline'}
             onClick={() => window.location.href = `/search?q=${query}&type=composer`}
           >
-            Composer Logs
+            Agent Logs
           </Button>
         </div>
       </div>
@@ -97,7 +97,7 @@ export default function SearchPage() {
                 </div>
               </div>
               <Badge variant={result.type === 'chat' ? 'default' : 'secondary'}>
-                {result.type === 'chat' ? 'Chat Log' : 'Composer Log'}
+                {result.type === 'chat' ? 'Ask Log' : 'Agent Log'}
               </Badge>
             </div>
             <div className="text-sm mt-2">{result.matchingText}</div>

@@ -69,8 +69,8 @@ export function WorkspaceList() {
             <TableHead>Workspace Hash</TableHead>
             <TableHead>Folder</TableHead>
             <TableHead>Last Modified</TableHead>
-            <TableHead className="text-right">Chat Logs</TableHead>
-            <TableHead className="text-right">Composer Logs</TableHead>
+            <TableHead className="text-right">Ask Logs</TableHead>
+            <TableHead className="text-right">Agent Logs</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

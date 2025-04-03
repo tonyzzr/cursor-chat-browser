@@ -32,7 +32,7 @@ export function Navbar() {
           <form onSubmit={handleSearch} className="relative">
             <Input
               type="search"
-              placeholder="Search chat and composer logs..."
+              placeholder="Search ask and agent logs..."
               className="w-full pl-10"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -44,7 +44,7 @@ export function Navbar() {
         <div className="flex items-center space-x-4">
           <div className="relative">
             <Button variant="ghost" asChild>
-              <Link href="/chat">Chat Logs</Link>
+              <Link href="/chat">Ask Logs</Link>
             </Button>
             {pathname.startsWith('/chat') && (
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground" />
@@ -53,7 +53,7 @@ export function Navbar() {
           
           <div className="relative">
             <Button variant="ghost" asChild>
-              <Link href="/composer">Composer Logs</Link>
+              <Link href="/composer">Agent Logs</Link>
             </Button>
             {pathname.startsWith('/composer') && (
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground" />
