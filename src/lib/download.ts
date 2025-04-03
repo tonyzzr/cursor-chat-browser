@@ -17,9 +17,11 @@ export function convertChatToMarkdown(tab: ChatTab): string {
       })
     }
     
-    // Add message text
+    // Add message text or placeholder for empty AI messages
     if (bubble.text) {
       markdown += bubble.text + '\n\n'
+    } else if (bubble.type === 'ai') {
+      markdown += '_[TERMINAL OUTPUT NOT INCLUDED]_\n\n'
     }
     
     markdown += '---\n\n'
@@ -86,6 +88,9 @@ export function downloadHTML(tab: ChatTab) {
           padding-left: 1em;
           color: #666;
         }
+        em {
+          color: #666;
+        }
         @media (prefers-color-scheme: dark) {
           body {
             background: #1a1a1a;
@@ -99,13 +104,16 @@ export function downloadHTML(tab: ChatTab) {
             border-color: #404040;
             color: #999;
           }
+          em {
+            color: #999;
+          }
         }
       </style>
     </head>
     <body>
       ${htmlContent}
     </body>
-    </html>
+  </html>
   `
   
   const blob = new Blob([html], { type: 'text/html' })

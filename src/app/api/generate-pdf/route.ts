@@ -25,7 +25,7 @@ export async function POST(request: Request) {
         content.push({
           text: token.text,
           style: `heading${token.depth}`,
-          margin: [0, 10, 0, 5]
+          margin: [0, 10, 0, 5] as [number, number, number, number]
         })
       } 
       else if (token.type === 'code') {
@@ -51,25 +51,25 @@ export async function POST(request: Request) {
             {
               text: token.text,
               style: 'code',
-              margin: [10, -totalHeight + padding, 10, padding] // Adjust margin to account for padding
+              margin: [10, -totalHeight + padding, 10, padding] as [number, number, number, number]
             }
           ],
-          margin: [0, 10, 0, 10]
+          margin: [0, 10, 0, 10] as [number, number, number, number]
         })
       }
       else if (token.type === 'list') {
         const items = token.items.map((item: any) => ({
           text: item.text,
-          margin: [0, 2, 0, 2]
+          margin: [0, 2, 0, 2] as [number, number, number, number]
         }))
         content.push({
           ul: items,
-          margin: [10, 5, 0, 5]
+          margin: [10, 5, 0, 5] as [number, number, number, number]
         })
       }
       else if (token.type === 'paragraph') {
-        // Handle inline code in paragraphs
-        const parts = token.text.split(/(`[^`]+`)/).map((part, index) => {
+        // Handle inline code and terminal output placeholder
+        const parts = token.text.split(/(`[^`]+`|\[TERMINAL OUTPUT NOT INCLUDED\])/).map((part: string, index: number) => {
           if (part.startsWith('`') && part.endsWith('`')) {
             return {
               text: part.slice(1, -1),
@@ -78,18 +78,25 @@ export async function POST(request: Request) {
               color: '#d4d4d4'
             }
           }
+          if (part === '[TERMINAL OUTPUT NOT INCLUDED]') {
+            return {
+              text: part,
+              style: 'placeholder',
+              italics: true
+            }
+          }
           return part
         })
 
         content.push({
           text: parts,
-          margin: [0, 5, 0, 5]
+          margin: [0, 5, 0, 5] as [number, number, number, number]
         })
       }
       else if (token.type === 'hr') {
         content.push({
           canvas: [{ type: 'line', x1: 0, y1: 5, x2: 515, y2: 5, lineWidth: 1 }],
-          margin: [0, 10, 0, 10]
+          margin: [0, 10, 0, 10] as [number, number, number, number]
         })
       }
     })
@@ -104,7 +111,7 @@ export async function POST(request: Request) {
           fontSize: 24,
           bold: true,
           font: 'Roboto',
-          margin: [0, 0, 0, 20]
+          margin: [0, 0, 0, 20] as [number, number, number, number]
         },
         heading1: {
           fontSize: 20,
@@ -136,7 +143,11 @@ export async function POST(request: Request) {
           fontSize: 10,
           background: '#1e1e1e',
           color: '#d4d4d4',
-          padding: [2, 1, 2, 1]
+          padding: [2, 1, 2, 1] as [number, number, number, number]
+        },
+        placeholder: {
+          color: '#666666',
+          fontSize: 12
         }
       },
       pageMargins: [40, 60, 40, 60] as [number, number, number, number]
