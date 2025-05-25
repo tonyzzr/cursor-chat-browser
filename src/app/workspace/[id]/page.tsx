@@ -23,6 +23,7 @@ interface WorkspaceState {
   selectedId: string | null;
   selectedType: 'chat' | 'composer';
   isLoading: boolean;
+  hideEmpty: boolean;
 }
 
 export default function WorkspacePage({ params }: { params: { id: string } }) {
@@ -33,7 +34,8 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
     composers: [],
     selectedId: searchParams.get('tab'),
     selectedType: (searchParams.get('type') as 'chat' | 'composer') || 'chat',
-    isLoading: true
+    isLoading: true,
+    hideEmpty: false
   })
 
   const handleSelect = (id: string, type: 'chat' | 'composer') => {
@@ -120,7 +122,7 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
               id: selectedComposer.composerId,
               title: selectedComposer.text || 'Untitled',
               timestamp: new Date(selectedComposer.lastUpdatedAt || selectedComposer.createdAt).toISOString(),
-              bubbles: selectedComposer.conversation.map(msg => ({
+              bubbles: (selectedComposer.conversation || []).map(msg => ({
                 type: msg.type === 1 ? 'user' : 'ai',
                 text: msg.text,
                 modelType: msg.type === 2 ? 'Composer Assistant' : undefined,
@@ -141,9 +143,21 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
       <div className="grid grid-cols-12 gap-6">
         <div className="col-span-3 space-y-4">
           <div className="space-y-4">
+            <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold">Ask Logs</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setState(prev => ({ ...prev, hideEmpty: !prev.hideEmpty }))}
+                className="text-xs"
+              >
+                {state.hideEmpty ? 'Show Empty' : 'Hide Empty'}
+              </Button>
+            </div>
             <div className="space-y-2">
-              {state.tabs.map((tab) => (
+              {(state.tabs || [])
+                .filter(tab => !state.hideEmpty || (tab.bubbles && tab.bubbles.length > 0))
+                .map((tab) => (
                 <Button
                   key={tab.id}
                   variant={state.selectedId === tab.id ? "default" : "outline"}
@@ -152,8 +166,11 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
                   title={tab.title}
                 >
                   <div className="text-left w-full">
-                    <div className="font-medium truncate">
+                    <div className="font-medium truncate flex items-center gap-2">
                       {tab.title || `Chat ${tab.id.slice(0, 8)}`}
+                      {(!tab.bubbles || tab.bubbles.length === 0) && (
+                        <Badge variant="outline" className="text-xs">Empty</Badge>
+                      )}
                     </div>
                     <div className="text-sm text-muted-foreground">
                       {new Date(tab.timestamp).toLocaleString()}
@@ -164,11 +181,23 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
             </div>
           </div>
 
-          {state.composers.length > 0 && (
+          {(state.composers || []).length > 0 && (
             <div className="space-y-4 mt-8">
+              <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold">Agent Logs</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setState(prev => ({ ...prev, hideEmpty: !prev.hideEmpty }))}
+                  className="text-xs"
+                >
+                  {state.hideEmpty ? 'Show Empty' : 'Hide Empty'}
+                </Button>
+              </div>
               <div className="space-y-2">
-                {state.composers.map((composer) => (
+                {(state.composers || [])
+                  .filter(composer => !state.hideEmpty || (composer.conversation && composer.conversation.length > 0))
+                  .map((composer) => (
                   <Button
                     key={composer.composerId}
                     variant={state.selectedId === composer.composerId ? "default" : "outline"}
@@ -177,8 +206,11 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
                     title={composer.name || 'Untitled'}
                   >
                     <div className="text-left w-full">
-                      <div className="font-medium truncate">
+                      <div className="font-medium truncate flex items-center gap-2">
                         {composer.name || `Composer ${composer.composerId.slice(0, 8)}`}
+                        {(!composer.conversation || composer.conversation.length === 0) && (
+                          <Badge variant="outline" className="text-xs">Empty</Badge>
+                        )}
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {new Date(composer.lastUpdatedAt || composer.createdAt).toLocaleString()}
@@ -202,8 +234,25 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
                   {state.selectedType === 'chat' ? 'Ask Log' : 'Agent Log'}
                 </Badge>
               </div>
+              
+              {/* Check if conversation is empty */}
+              {((selectedChat && (!selectedChat.bubbles || selectedChat.bubbles.length === 0)) ||
+                (selectedComposer && (!selectedComposer.conversation || selectedComposer.conversation.length === 0))) ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <div className="mb-4">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mx-auto opacity-50">
+                      <path d="M8 12H16M8 16H13M6 20H18C19.1046 20 20 19.1046 20 18V6C20 4.89543 19.1046 4 18 4H6C4.89543 4 4 4.89543 4 6V18C4 19.1046 4.89543 20 6 20Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-medium mb-2">No conversation data</h3>
+                  <p className="text-sm">
+                    This {state.selectedType === 'chat' ? 'chat session' : 'composer session'} appears to be empty. 
+                    This can happen if the conversation was cleared, never started, or failed to save properly.
+                  </p>
+                </div>
+              ) : (
               <div className="space-y-6">
-                {selectedChat && selectedChat.bubbles.map((bubble, index) => (
+                  {selectedChat && (selectedChat.bubbles || []).map((bubble, index) => (
                   <div
                     key={index}
                     className={`p-4 rounded-lg border ${
@@ -271,7 +320,7 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
                     ) : null}
                   </div>
                 ))}
-                {selectedComposer?.conversation && selectedComposer.conversation!.map((message) => (
+                  {selectedComposer?.conversation && (selectedComposer.conversation || []).map((message) => (
                   <div
                     key={message.bubbleId}
                     className={`p-4 rounded-lg border ${
@@ -323,6 +372,7 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
                   </div>
                 ))}
               </div>
+              )}
             </Card>
           ) : (
             <div className="text-center text-muted-foreground mt-8">

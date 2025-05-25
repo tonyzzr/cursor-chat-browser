@@ -4,10 +4,19 @@ import fs from 'fs/promises'
 import sqlite3 from 'sqlite3'
 import { open } from 'sqlite'
 import { existsSync } from 'fs'
+import { cookies } from 'next/headers'
 
 export async function GET() {
   try {
-    const workspacePath = process.env.WORKSPACE_PATH || ''
+    // TEMPORARY HARDCODE: Testing if path is the issue
+    const workspacePath = '/Users/zhuoruizhang/Library/Application Support/Cursor/User/workspaceStorage'
+    
+    console.log('HARDCODED workspace path:', workspacePath)
+    
+    if (!workspacePath) {
+      return NextResponse.json({ error: 'Workspace path not configured' }, { status: 400 })
+    }
+    
     const workspaces = []
     
     const entries = await fs.readdir(workspacePath, { withFileTypes: true })
@@ -44,6 +53,11 @@ export async function GET() {
             } catch (error) {
               console.error('Error parsing chat data:', error)
             }
+          } else {
+            // For new format, we can't easily count chats per workspace
+            // since they're all stored in global storage
+            // Set a placeholder count to indicate new format is being used
+            chatCount = -1 // Special value to indicate new format
           }
           
           // Try to read workspace.json

@@ -5,10 +5,19 @@ import { existsSync } from 'fs'
 import sqlite3 from 'sqlite3'
 import { open } from 'sqlite'
 import { ComposerChat, ComposerData } from '@/types/workspace'
+import { cookies } from 'next/headers'
 
 export async function GET() {
   try {
-    const workspacePath = process.env.WORKSPACE_PATH || ''
+    // TEMPORARY HARDCODE: Testing if path is the issue
+    const workspacePath = '/Users/zhuoruizhang/Library/Application Support/Cursor/User/workspaceStorage'
+    
+    console.log('HARDCODED workspace path:', workspacePath)
+    
+    if (!workspacePath) {
+      return NextResponse.json({ error: 'Workspace path not configured' }, { status: 400 })
+    }
+    
     const composers = []
     
     const entries = await fs.readdir(workspacePath, { withFileTypes: true })
@@ -55,14 +64,10 @@ export async function GET() {
       }
     }
 
-    // Sort by lastUpdatedAt before returning
-    composers.sort((a: ComposerChat, b: ComposerChat) => {
-      const aTime = a.lastUpdatedAt || 0
-      const bTime = b.lastUpdatedAt || 0
-      return bTime - aTime
-    })
-    
-    return NextResponse.json(composers)
+    return NextResponse.json(composers.sort((a, b) => 
+      new Date(b.lastUpdatedAt || b.createdAt).getTime() - 
+      new Date(a.lastUpdatedAt || a.createdAt).getTime()
+    ))
   } catch (error) {
     console.error('Failed to get composers:', error)
     return NextResponse.json({ error: 'Failed to get composers' }, { status: 500 })

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { ComposerChat } from '@/types/workspace'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   Table,
   TableBody,
@@ -22,6 +23,8 @@ interface ComposerWithWorkspace extends ComposerChat {
 export function ComposerList() {
   const [composers, setComposers] = useState<ComposerWithWorkspace[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
 
   useEffect(() => {
     const fetchComposers = async () => {
@@ -29,16 +32,23 @@ export function ComposerList() {
         const response = await fetch('/api/composers')
         const data = await response.json()
         
-        // Sort by last message timestamp, newest first
-        data.sort((a: ComposerWithWorkspace, b: ComposerWithWorkspace) => {
-          const aTime = a.lastUpdatedAt || 0
-          const bTime = b.lastUpdatedAt || 0
-          return bTime - aTime
-        })
+        // Check if the response is an error
+        if (!response.ok || data.error) {
+          setError(data.error || 'Failed to fetch composers')
+          return
+        }
+        
+        // Ensure data is an array
+        if (!Array.isArray(data)) {
+          setError('Invalid response format')
+          return
+        }
 
         setComposers(data)
+        setError(null)
       } catch (error) {
         console.error('Failed to fetch composers:', error)
+        setError('Failed to fetch composers')
       } finally {
         setIsLoading(false)
       }
@@ -48,6 +58,31 @@ export function ComposerList() {
 
   if (isLoading) {
     return <Loading message="Loading agent logs..." />
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-600 mb-4">{error}</p>
+        <p className="text-gray-600">
+          Please check your workspace configuration in the{' '}
+          <button 
+            onClick={() => router.push('/config')}
+            className="text-blue-600 hover:underline"
+          >
+            settings page
+          </button>
+        </p>
+      </div>
+    )
+  }
+
+  if (composers.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-600">No composer logs found.</p>
+      </div>
+    )
   }
 
   return (

@@ -5,13 +5,22 @@ import fs from 'fs/promises'
 import sqlite3 from 'sqlite3'
 import { open } from 'sqlite'
 import { ComposerChat, ComposerData } from '@/types/workspace'
+import { cookies } from 'next/headers'
 
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const workspacePath = process.env.WORKSPACE_PATH || ''
+    // Get workspace path from cookies instead of environment variable
+    const cookieStore = cookies()
+    const rawWorkspacePath = cookieStore.get('workspacePath')?.value
+    const workspacePath = rawWorkspacePath ? decodeURIComponent(rawWorkspacePath) : process.env.WORKSPACE_PATH || ''
+    
+    if (!workspacePath) {
+      return NextResponse.json({ error: 'Workspace path not configured' }, { status: 400 })
+    }
+    
     const entries = await fs.readdir(workspacePath, { withFileTypes: true })
     
     for (const entry of entries) {

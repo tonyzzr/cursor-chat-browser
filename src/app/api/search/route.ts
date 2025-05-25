@@ -4,6 +4,7 @@ import fs from 'fs/promises'
 import { existsSync } from 'fs'
 import sqlite3 from 'sqlite3'
 import { open } from 'sqlite'
+import { cookies } from 'next/headers'
 
 export async function GET(request: Request) {
   try {
@@ -15,7 +16,15 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'No search query provided' }, { status: 400 })
     }
 
-    const workspacePath = process.env.WORKSPACE_PATH || ''
+    // Get workspace path from cookies instead of environment variable
+    const cookieStore = cookies()
+    const rawWorkspacePath = cookieStore.get('workspacePath')?.value
+    const workspacePath = rawWorkspacePath ? decodeURIComponent(rawWorkspacePath) : process.env.WORKSPACE_PATH || ''
+    
+    if (!workspacePath) {
+      return NextResponse.json({ error: 'Workspace path not configured' }, { status: 400 })
+    }
+
     const results = []
     const entries = await fs.readdir(workspacePath, { withFileTypes: true })
 
@@ -34,7 +43,6 @@ export async function GET(request: Request) {
           console.log(`No workspace.json found for ${entry.name}`)
         }
 
-        try {
           const db = await open({
             filename: dbPath,
             driver: sqlite3.Database
@@ -49,35 +57,44 @@ export async function GET(request: Request) {
 
             if (chatResult?.value) {
               const chatData = JSON.parse(chatResult.value)
+            if (chatData.tabs && Array.isArray(chatData.tabs)) {
               for (const tab of chatData.tabs) {
-                let hasMatch = false
-                let matchingText = ''
-
-                // Search in chat title
-                if (tab.chatTitle?.toLowerCase().includes(query.toLowerCase())) {
-                  hasMatch = true
-                  matchingText = tab.chatTitle
-                }
-
-                // Search in bubbles
-                for (const bubble of tab.bubbles) {
-                  if (bubble.text?.toLowerCase().includes(query.toLowerCase())) {
-                    hasMatch = true
-                    matchingText = bubble.text
+                const title = tab.chatTitle?.split('\n')[0] || `Chat ${tab.tabId.slice(0, 8)}`
+                const content = tab.bubbles?.map((bubble: any) => bubble.text).join(' ') || ''
+                
+                if (title.toLowerCase().includes(query.toLowerCase()) || 
+                    content.toLowerCase().includes(query.toLowerCase())) {
+                  
+                  // Find matching snippets
+                  const snippets = []
+                  const words = query.toLowerCase().split(' ')
+                  
+                  for (const bubble of tab.bubbles || []) {
+                    const text = bubble.text || ''
+                    const lowerText = text.toLowerCase()
+                    
+                    for (const word of words) {
+                      if (lowerText.includes(word)) {
+                        const index = lowerText.indexOf(word)
+                        const start = Math.max(0, index - 50)
+                        const end = Math.min(text.length, index + word.length + 50)
+                        const snippet = text.slice(start, end)
+                        snippets.push(snippet)
                     break
+                      }
                   }
                 }
 
-                if (hasMatch) {
                   results.push({
+                    id: tab.tabId,
                     workspaceId: entry.name,
                     workspaceFolder,
-                    chatId: tab.tabId,
-                    chatTitle: tab.chatTitle || `Chat ${tab.tabId?.substring(0, 8) || 'Untitled'}`,
-                    timestamp: tab.lastSendTime || new Date().toISOString(),
-                    matchingText,
-                    type: 'chat'
+                    title,
+                    type: 'chat',
+                    timestamp: new Date(tab.lastSendTime || 0).toISOString(),
+                    snippets: snippets.slice(0, 3) // Limit to 3 snippets
                   })
+                }
                 }
               }
             }
@@ -92,55 +109,59 @@ export async function GET(request: Request) {
 
             if (composerResult?.value) {
               const composerData = JSON.parse(composerResult.value)
+            if (composerData.allComposers && Array.isArray(composerData.allComposers)) {
               for (const composer of composerData.allComposers) {
-                let hasMatch = false
-                let matchingText = ''
-
-                // Search in composer text/title
-                if (composer.text?.toLowerCase().includes(query.toLowerCase())) {
-                  hasMatch = true
-                  matchingText = composer.text
-                }
-
-                // Search in conversation
-                if (Array.isArray(composer.conversation)) {
-                  for (const message of composer.conversation) {
-                    if (message.text?.toLowerCase().includes(query.toLowerCase())) {
-                      hasMatch = true
-                      matchingText = message.text
+                const title = composer.text || 'Untitled'
+                const content = composer.conversation?.map((msg: any) => msg.text).join(' ') || ''
+                
+                if (title.toLowerCase().includes(query.toLowerCase()) || 
+                    content.toLowerCase().includes(query.toLowerCase())) {
+                  
+                  // Find matching snippets
+                  const snippets = []
+                  const words = query.toLowerCase().split(' ')
+                  
+                  for (const msg of composer.conversation || []) {
+                    const text = msg.text || ''
+                    const lowerText = text.toLowerCase()
+                    
+                    for (const word of words) {
+                      if (lowerText.includes(word)) {
+                        const index = lowerText.indexOf(word)
+                        const start = Math.max(0, index - 50)
+                        const end = Math.min(text.length, index + word.length + 50)
+                        const snippet = text.slice(start, end)
+                        snippets.push(snippet)
                       break
                     }
                   }
                 }
 
-                if (hasMatch) {
                   results.push({
+                    id: composer.composerId,
                     workspaceId: entry.name,
                     workspaceFolder,
-                    chatId: composer.composerId,
-                    chatTitle: composer.text || `Composer ${composer.composerId.substring(0, 8)}`,
-                    timestamp: composer.lastUpdatedAt || composer.createdAt || new Date().toISOString(),
-                    matchingText,
-                    type: 'composer'
+                    title,
+                    type: 'composer',
+                    timestamp: new Date(composer.lastUpdatedAt || composer.createdAt || 0).toISOString(),
+                    snippets: snippets.slice(0, 3) // Limit to 3 snippets
                   })
                 }
               }
             }
           }
-
-          await db.close()
-        } catch (error) {
-          console.error(`Error processing workspace ${entry.name}:`, error)
         }
+
+        await db.close()
       }
     }
 
-    // Sort results by timestamp, newest first
+    // Sort by timestamp (newest first)
     results.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 
-    return NextResponse.json(results)
+    return NextResponse.json({ results })
   } catch (error) {
-    console.error('Failed to search:', error)
-    return NextResponse.json({ error: 'Failed to search' }, { status: 500 })
+    console.error('Search error:', error)
+    return NextResponse.json({ error: 'Search failed' }, { status: 500 })
   }
 } 

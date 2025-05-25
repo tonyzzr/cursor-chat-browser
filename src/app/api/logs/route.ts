@@ -5,6 +5,7 @@ import { existsSync } from 'fs'
 import sqlite3 from 'sqlite3'
 import { open } from 'sqlite'
 import { ChatTab, ComposerChat } from '@/types/workspace'
+import { cookies } from 'next/headers'
 
 interface WorkspaceLog {
   id: string;
@@ -18,7 +19,13 @@ interface WorkspaceLog {
 
 export async function GET() {
   try {
-    const workspacePath = process.env.WORKSPACE_PATH || ''
+    // TEMPORARY HARDCODE: Testing if path is the issue
+    const workspacePath = '/Users/zhuoruizhang/Library/Application Support/Cursor/User/workspaceStorage'
+    
+    if (!workspacePath) {
+      return NextResponse.json({ error: 'Workspace path not configured' }, { status: 400 })
+    }
+    
     const logs: WorkspaceLog[] = []
     
     const entries = await fs.readdir(workspacePath, { withFileTypes: true })
@@ -63,6 +70,72 @@ export async function GET() {
             }))
             logs.push(...chatLogs)
           }
+        } else {
+          // Try new bubble-based format
+          try {
+            const globalDbPath = path.join(workspacePath, '..', 'globalStorage', 'state.vscdb')
+            if (existsSync(globalDbPath)) {
+              const globalDb = await open({
+                filename: globalDbPath,
+                driver: sqlite3.Database
+              })
+
+              // Get all bubble keys
+              const allBubbles = await globalDb.all(`
+                SELECT [key], value FROM cursorDiskKV 
+                WHERE [key] LIKE 'bubbleId:%'
+              `)
+
+              // Group bubbles by chat ID
+              const chatGroups: { [chatId: string]: any[] } = {}
+              
+              for (const bubble of allBubbles) {
+                try {
+                  const bubbleData = JSON.parse(bubble.value)
+                  
+                  // Skip if bubbleData is null or not an object
+                  if (!bubbleData || typeof bubbleData !== 'object') {
+                    continue
+                  }
+                  
+                  const keyParts = bubble.key.split(':')
+                  if (keyParts.length >= 2) {
+                    const chatId = keyParts[1]
+                    
+                    // Only include chat bubbles (not composer)
+                    if (bubbleData.isChat !== false) {
+                      if (!chatGroups[chatId]) {
+                        chatGroups[chatId] = []
+                      }
+                      chatGroups[chatId].push(bubbleData)
+                    }
+                  }
+                } catch (error) {
+                  // Skip invalid bubbles
+                }
+              }
+
+              // Convert to chat logs
+              for (const [chatId, bubbles] of Object.entries(chatGroups)) {
+                const firstUserBubble = bubbles.find(b => b.type === 'user' || b.type === 1)
+                const title = firstUserBubble?.text?.split('\n')[0]?.slice(0, 50) || `Chat ${chatId.slice(0, 8)}`
+                
+                logs.push({
+                  id: chatId,
+                  workspaceId: entry.name,
+                  workspaceFolder,
+                  title,
+                  timestamp: Date.now(), // We'll need to figure out proper timestamps
+                  type: 'chat' as const,
+                  messageCount: bubbles.length
+                })
+              }
+
+              await globalDb.close()
+            }
+          } catch (error) {
+            console.error('Error processing new format chats:', error)
+          }
         }
 
         // Get composer logs
@@ -79,7 +152,7 @@ export async function GET() {
               workspaceId: entry.name,
               workspaceFolder,
               title: composer.text || `Composer ${(composer.composerId || '').slice(0, 8)}`,
-              timestamp: composer.lastUpdatedAt || composer.createdAt || Date.now(),
+              timestamp: new Date(composer.lastUpdatedAt || composer.createdAt || 0).getTime(),
               type: 'composer' as const,
               messageCount: composer.conversation?.length || 0
             }))
@@ -91,12 +164,12 @@ export async function GET() {
       }
     }
 
-    // Sort all logs by timestamp, newest first
+    // Sort by timestamp, newest first
     logs.sort((a, b) => b.timestamp - a.timestamp)
     
     return NextResponse.json({ logs })
   } catch (error) {
     console.error('Failed to get logs:', error)
-    return NextResponse.json({ error: 'Failed to get logs', logs: [] }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to get logs' }, { status: 500 })
   }
 } 

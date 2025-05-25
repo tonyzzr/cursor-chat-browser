@@ -80,7 +80,7 @@ export default function ConfigPage() {
 
           if (data.valid) {
             localStorage.setItem('workspacePath', expandedPath)
-            document.cookie = `workspacePath=${encodeURIComponent(expandedPath)}; path=/`
+            document.cookie = `workspacePath=${encodeURIComponent(expandedPath)}; path=/; SameSite=Lax`
             router.push('/')
             return
           }
@@ -110,7 +110,7 @@ export default function ConfigPage() {
 
       if (data.valid) {
         localStorage.setItem('workspacePath', expandedPath)
-        document.cookie = `workspacePath=${encodeURIComponent(expandedPath)}; path=/`
+        document.cookie = `workspacePath=${encodeURIComponent(expandedPath)}; path=/; SameSite=Lax`
         
         await fetch('/api/set-workspace', {
           method: 'POST',

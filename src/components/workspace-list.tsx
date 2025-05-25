@@ -21,6 +21,7 @@ interface WorkspaceWithCounts extends Workspace {
 export function WorkspaceList() {
   const [workspaces, setWorkspaces] = useState<WorkspaceWithCounts[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -29,22 +30,30 @@ export function WorkspaceList() {
         const response = await fetch('/api/workspaces')
         const data = await response.json()
         
-        // Fetch composer counts for each workspace
-        const workspacesWithCounts = await Promise.all(
-          data.map(async (workspace: Workspace) => {
-            const tabsRes = await fetch(`/api/workspaces/${workspace.id}/tabs`)
-            const tabsData = await tabsRes.json()
-            const composerCount = tabsData.composers?.allComposers?.length || 0
-            return {
-              ...workspace,
-              composerCount
-            }
-          })
-        )
+        // Check if the response is an error
+        if (!response.ok || data.error) {
+          setError(data.error || 'Failed to fetch workspaces')
+          return
+        }
+        
+        // Ensure data is an array
+        if (!Array.isArray(data)) {
+          setError('Invalid response format')
+          return
+        }
+        
+        // For new format (chatCount = -1), don't fetch individual composer counts
+        // to avoid processing the global database multiple times
+        const workspacesWithCounts = data.map((workspace: Workspace) => ({
+          ...workspace,
+          composerCount: 0 // We'll show this in the UI differently for new format
+        }))
         
         setWorkspaces(workspacesWithCounts)
+        setError(null)
       } catch (error) {
         console.error('Failed to fetch workspaces:', error)
+        setError('Failed to fetch workspaces')
       } finally {
         setLoading(false)
       }
@@ -59,6 +68,31 @@ export function WorkspaceList() {
 
   if (loading) {
     return <Loading message="Loading workspaces..." />
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-600 mb-4">{error}</p>
+        <p className="text-gray-600">
+          Please check your workspace configuration in the{' '}
+          <button 
+            onClick={() => router.push('/config')}
+            className="text-blue-600 hover:underline"
+          >
+            settings page
+          </button>
+        </p>
+      </div>
+    )
+  }
+
+  if (workspaces.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-600">No workspaces with chat history found.</p>
+      </div>
+    )
   }
 
   return (
@@ -76,7 +110,7 @@ export function WorkspaceList() {
         <TableBody>
           {workspaces
             .sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime())
-            .filter(workspace => workspace.chatCount > 0 || workspace.composerCount > 0)
+            .filter(workspace => workspace.chatCount > 0 || workspace.chatCount === -1 || workspace.composerCount > 0)
             .map((workspace) => (
               <TableRow key={workspace.id} className="hover:bg-accent/50">
                 <TableCell>
@@ -106,7 +140,7 @@ export function WorkspaceList() {
                   {format(new Date(workspace.lastModified), 'PPP p')}
                 </TableCell>
                 <TableCell className="text-right">
-                  {workspace.chatCount}
+                  {workspace.chatCount === -1 ? '✓' : workspace.chatCount}
                 </TableCell>
                 <TableCell className="text-right">
                   {workspace.composerCount}

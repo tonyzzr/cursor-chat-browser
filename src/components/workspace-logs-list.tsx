@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   Table,
   TableBody,
@@ -27,16 +28,26 @@ interface WorkspaceLog {
 export function WorkspaceLogsList() {
   const [logs, setLogs] = useState<WorkspaceLog[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
 
   useEffect(() => {
     const fetchLogs = async () => {
       try {
         const response = await fetch('/api/logs')
         const data = await response.json()
+        
+        // Check if the response is an error
+        if (!response.ok || data.error) {
+          setError(data.error || 'Failed to fetch logs')
+          return
+        }
+        
         setLogs(data.logs || [])
+        setError(null)
       } catch (error) {
         console.error('Failed to fetch logs:', error)
-        setLogs([])
+        setError('Failed to fetch logs')
       } finally {
         setIsLoading(false)
       }
@@ -46,6 +57,31 @@ export function WorkspaceLogsList() {
 
   if (isLoading) {
     return <Loading message="Loading logs..." />
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-600 mb-4">{error}</p>
+        <p className="text-gray-600">
+          Please check your workspace configuration in the{' '}
+          <button 
+            onClick={() => router.push('/config')}
+            className="text-blue-600 hover:underline"
+          >
+            settings page
+          </button>
+        </p>
+      </div>
+    )
+  }
+
+  if (logs.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-600">No logs found.</p>
+      </div>
+    )
   }
 
   return (
