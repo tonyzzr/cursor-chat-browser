@@ -60,6 +60,24 @@ export function Navbar() {
             )}
           </div>
           
+          <div className="relative">
+            <Button variant="ghost" asChild>
+              <Link href="/active-chat">Active Chat</Link>
+            </Button>
+            {pathname.startsWith('/active-chat') && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground" />
+            )}
+          </div>
+          
+          <div className="relative">
+            <Button variant="ghost" asChild>
+              <Link href="/api-docs">API</Link>
+            </Button>
+            {pathname.startsWith('/api-docs') && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground" />
+            )}
+          </div>
+          
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="ghost" size="icon" asChild>

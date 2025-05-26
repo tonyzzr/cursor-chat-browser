@@ -45,7 +45,7 @@ export function WorkspaceList() {
         // For new format (chatCount = -1), don't fetch individual composer counts
         // to avoid processing the global database multiple times
         const workspacesWithCounts = data.map((workspace: Workspace) => ({
-          ...workspace,
+              ...workspace,
           composerCount: 0 // We'll show this in the UI differently for new format
         }))
         
