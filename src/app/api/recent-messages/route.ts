@@ -22,14 +22,14 @@ export async function GET(request: Request) {
       driver: sqlite3.Database
     })
 
-    // Get recent bubbles
+    // Get recent bubbles with rowid for proper sequencing
     let query = `
-      SELECT [key], value FROM cursorDiskKV 
+      SELECT rowid, [key], value FROM cursorDiskKV 
       WHERE [key] LIKE 'bubbleId:%'
       ORDER BY rowid DESC
       LIMIT ?
     `
-    const params = [Math.min(limit * 5, 500)] // Get more bubbles to filter from
+    const params = [Math.min(limit * 20, 1000)] // Get many more bubbles to find ones with text
 
     const recentBubbles = await db.all(query, params)
 
@@ -62,7 +62,11 @@ export async function GET(request: Request) {
     let maxTextBubbles = 0
     
     for (const [chatId, bubbles] of Array.from(conversationGroups.entries())) {
+      // Sort bubbles by rowId (chronological order) - higher rowId = more recent
+      bubbles.sort((a, b) => a.rowId - b.rowId)
+      
       const textBubbleCount = bubbles.filter(b => b.text && b.text.length > 0).length
+      
       if (textBubbleCount > maxTextBubbles) {
         maxTextBubbles = textBubbleCount
         activeConversation = { chatId, bubbles }
@@ -78,7 +82,7 @@ export async function GET(request: Request) {
       })
     }
 
-    // Convert bubbles to messages
+    // Convert bubbles to messages with deduplication
     let messages = activeConversation.bubbles.map((bubble: any, index: number) => {
       const isUser = bubble.type === 1 || bubble.type === 'user'
       const isAssistant = bubble.type === 2 || bubble.type === 'assistant'
@@ -98,6 +102,7 @@ export async function GET(request: Request) {
       return {
         id: bubble.bubbleId,
         bubbleKey: bubble.bubbleKey,
+        rowId: bubble.rowId, // Include rowId for proper sequencing
         type: isUser ? 'user' : isAssistant ? 'assistant' : 'unknown',
         text: text,
         timestamp: new Date().toISOString(), // Use current time since bubble timestamps aren't reliable
@@ -109,12 +114,29 @@ export async function GET(request: Request) {
       }
     })
 
+    // Deduplicate messages with identical text content (keep the one with highest rowId)
+    const deduplicatedMessages = new Map<string, any>()
+    for (const message of messages) {
+      if (message.text && message.text.length > 0) {
+        const key = `${message.type}:${message.text.trim()}`
+        const existing = deduplicatedMessages.get(key)
+        if (!existing || message.rowId > existing.rowId) {
+          deduplicatedMessages.set(key, message)
+        }
+      } else {
+        // Keep empty messages as-is (they're usually unique)
+        deduplicatedMessages.set(`empty:${message.rowId}`, message)
+      }
+    }
+    
+    messages = Array.from(deduplicatedMessages.values()).sort((a, b) => a.rowId - b.rowId)
+
     // Filter out empty messages unless requested
     if (!includeEmpty) {
       messages = messages.filter(msg => msg.text && msg.text.length > 0)
     }
 
-    // Apply limit
+    // Apply limit AFTER filtering
     messages = messages.slice(-limit)
 
     // Filter by 'since' parameter if provided

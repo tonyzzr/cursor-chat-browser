@@ -12,12 +12,52 @@ interface Message {
   type: 'user' | 'assistant' | 'unknown'
   text: string
   timestamp?: string
-  hasCodeBlocks: boolean
-  hasToolResults: boolean
-  hasAttachedFiles: boolean
-  isAgentic: boolean
-  capabilities: string[]
-  rawKeys: string[]
+  hasCodeBlocks?: boolean
+  hasToolResults?: boolean
+  hasAttachedFiles?: boolean
+  isAgentic?: boolean
+  capabilities?: string[]
+  metadata?: {
+    hasContent: {
+      text: boolean
+      codeBlocks: boolean
+      toolResults: boolean
+      attachedFiles: boolean
+      gitDiffs: boolean
+      lints: boolean
+    }
+    isAgentic: boolean
+    tokenCount: number
+    capabilities: string[]
+    codeBlocks?: Array<{
+      language: string
+      code: string
+      filename?: string
+    }>
+    toolResults?: Array<{
+      tool: string
+      output: string
+      success: boolean
+      duration?: number
+    }>
+    attachedFiles?: Array<{
+      filename: string
+      content: string
+      startLine?: number
+      endLine?: number
+    }>
+    gitDiffs?: Array<{
+      filename: string
+      diff: string
+      type: string
+    }>
+    lints?: Array<{
+      filename: string
+      message: string
+      severity: string
+      line?: number
+    }>
+  }
 }
 
 interface ActiveChat {
@@ -42,12 +82,44 @@ export default function ActiveChatPage() {
 
   const fetchActiveChat = async () => {
     try {
-      const response = await fetch('/api/active-chat')
+      // Try enhanced API first, fallback to basic if needed
+      let response = await fetch('/api/recent-messages-enhanced?limit=20&metadataLevel=full')
+      let isEnhanced = true
+      
+      if (!response.ok) {
+        // Fallback to basic API
+        response = await fetch('/api/active-chat')
+        isEnhanced = false
+      }
+      
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
+      
       const data = await response.json()
-      setActiveChat(data)
+      
+      // Transform enhanced API response to match our interface
+      if (isEnhanced && data.messages) {
+        const transformedData = {
+          chatId: data.chatId,
+          title: `Enhanced Chat (${data.messages.length} messages)`,
+          messageCount: data.messages.length,
+          totalBubbles: data.metadata.totalBubbles,
+          lastActivity: data.metadata.timestamp,
+          messages: data.messages,
+          metadata: {
+            globalDbPath: data.metadata.globalDbPath,
+            totalConversations: data.metadata.conversationCount,
+            recentBubblesChecked: data.metadata.totalBubbles,
+            isEnhanced: true,
+            contentScore: data.metadata.contentScore
+          }
+        }
+        setActiveChat(transformedData)
+      } else {
+        setActiveChat(data)
+      }
+      
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch active chat')
@@ -218,21 +290,32 @@ export default function ActiveChatPage() {
                   {getMessageIcon(message.type)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
                     <Badge variant={message.type === 'user' ? 'default' : 'secondary'}>
                       {message.type}
                     </Badge>
-                    {message.isAgentic && (
-                      <Badge variant="outline">Agentic</Badge>
+                    {(message.isAgentic || message.metadata?.isAgentic) && (
+                      <Badge variant="outline">🤖 Agentic</Badge>
                     )}
-                    {message.hasCodeBlocks && (
-                      <Badge variant="outline">Code</Badge>
+                    {(message.hasCodeBlocks || message.metadata?.hasContent.codeBlocks) && (
+                      <Badge variant="outline">💻 Code</Badge>
                     )}
-                    {message.hasToolResults && (
-                      <Badge variant="outline">Tools</Badge>
+                    {(message.hasToolResults || message.metadata?.hasContent.toolResults) && (
+                      <Badge variant="outline">🔧 Tools</Badge>
                     )}
-                    {message.hasAttachedFiles && (
-                      <Badge variant="outline">Files</Badge>
+                    {(message.hasAttachedFiles || message.metadata?.hasContent.attachedFiles) && (
+                      <Badge variant="outline">📎 Files</Badge>
+                    )}
+                    {message.metadata?.hasContent.gitDiffs && (
+                      <Badge variant="outline">📊 Git</Badge>
+                    )}
+                    {message.metadata?.hasContent.lints && (
+                      <Badge variant="outline">⚠️ Lints</Badge>
+                    )}
+                    {message.metadata?.tokenCount && message.metadata.tokenCount > 0 && (
+                      <Badge variant="outline" className="text-xs">
+                        {message.metadata.tokenCount} tokens
+                      </Badge>
                     )}
                   </div>
                   <div className="prose prose-sm max-w-none">
@@ -240,7 +323,135 @@ export default function ActiveChatPage() {
                       {message.text || '(No text content)'}
                     </pre>
                   </div>
-                  {message.capabilities.length > 0 && (
+                  {/* Enhanced Metadata Display */}
+                  {message.metadata && (
+                    <div className="mt-3 space-y-2">
+                      {/* Code Blocks */}
+                      {message.metadata.codeBlocks && message.metadata.codeBlocks.length > 0 && (
+                        <details className="bg-white/70 rounded border p-2">
+                          <summary className="cursor-pointer text-xs font-medium text-gray-700">
+                            💻 Code Blocks ({message.metadata.codeBlocks.length})
+                          </summary>
+                          <div className="mt-2 space-y-2">
+                            {message.metadata.codeBlocks.map((block, i) => (
+                              <div key={i} className="bg-gray-50 rounded p-2">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Badge variant="outline" className="text-xs">{block.language}</Badge>
+                                  {block.filename && (
+                                    <span className="text-xs text-gray-600">{block.filename}</span>
+                                  )}
+                                </div>
+                                <pre className="text-xs bg-white p-2 rounded border overflow-x-auto">
+                                  {block.code.substring(0, 200)}{block.code.length > 200 ? '...' : ''}
+                                </pre>
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      )}
+
+                      {/* Tool Results */}
+                      {message.metadata.toolResults && message.metadata.toolResults.length > 0 && (
+                        <details className="bg-white/70 rounded border p-2">
+                          <summary className="cursor-pointer text-xs font-medium text-gray-700">
+                            🔧 Tool Results ({message.metadata.toolResults.length})
+                          </summary>
+                          <div className="mt-2 space-y-2">
+                            {message.metadata.toolResults.map((result, i) => (
+                              <div key={i} className="bg-gray-50 rounded p-2">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Badge variant="outline" className="text-xs">{result.tool}</Badge>
+                                  <Badge variant={result.success ? "default" : "destructive"} className="text-xs">
+                                    {result.success ? '✅' : '❌'}
+                                  </Badge>
+                                  {result.duration && (
+                                    <span className="text-xs text-gray-600">{result.duration}ms</span>
+                                  )}
+                                </div>
+                                <pre className="text-xs bg-white p-2 rounded border overflow-x-auto">
+                                  {result.output.substring(0, 200)}{result.output.length > 200 ? '...' : ''}
+                                </pre>
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      )}
+
+                      {/* Attached Files */}
+                      {message.metadata.attachedFiles && message.metadata.attachedFiles.length > 0 && (
+                        <details className="bg-white/70 rounded border p-2">
+                          <summary className="cursor-pointer text-xs font-medium text-gray-700">
+                            📎 Attached Files ({message.metadata.attachedFiles.length})
+                          </summary>
+                          <div className="mt-2 space-y-2">
+                            {message.metadata.attachedFiles.map((file, i) => (
+                              <div key={i} className="bg-gray-50 rounded p-2">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-xs font-medium">{file.filename}</span>
+                                  {file.startLine && (
+                                    <span className="text-xs text-gray-600">
+                                      Lines {file.startLine}-{file.endLine}
+                                    </span>
+                                  )}
+                                </div>
+                                <pre className="text-xs bg-white p-2 rounded border overflow-x-auto">
+                                  {file.content.substring(0, 200)}{file.content.length > 200 ? '...' : ''}
+                                </pre>
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      )}
+
+                      {/* Git Diffs */}
+                      {message.metadata.gitDiffs && message.metadata.gitDiffs.length > 0 && (
+                        <details className="bg-white/70 rounded border p-2">
+                          <summary className="cursor-pointer text-xs font-medium text-gray-700">
+                            📊 Git Changes ({message.metadata.gitDiffs.length})
+                          </summary>
+                          <div className="mt-2 space-y-2">
+                            {message.metadata.gitDiffs.map((diff, i) => (
+                              <div key={i} className="bg-gray-50 rounded p-2">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-xs font-medium">{diff.filename}</span>
+                                  <Badge variant="outline" className="text-xs">{diff.type}</Badge>
+                                </div>
+                                <pre className="text-xs bg-white p-2 rounded border overflow-x-auto">
+                                  {diff.diff.substring(0, 200)}{diff.diff.length > 200 ? '...' : ''}
+                                </pre>
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      )}
+
+                      {/* Lint Issues */}
+                      {message.metadata.lints && message.metadata.lints.length > 0 && (
+                        <details className="bg-white/70 rounded border p-2">
+                          <summary className="cursor-pointer text-xs font-medium text-gray-700">
+                            ⚠️ Lint Issues ({message.metadata.lints.length})
+                          </summary>
+                          <div className="mt-2 space-y-1">
+                            {message.metadata.lints.map((lint, i) => (
+                              <div key={i} className="bg-gray-50 rounded p-2">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-xs font-medium">{lint.filename}</span>
+                                  <Badge variant="outline" className="text-xs">{lint.severity}</Badge>
+                                  {lint.line && (
+                                    <span className="text-xs text-gray-600">Line {lint.line}</span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-gray-700">{lint.message}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Legacy Capabilities Display */}
+                  {(message.capabilities && message.capabilities.length > 0) && (
                     <div className="mt-2">
                       <p className="text-xs text-gray-600 mb-1">Capabilities:</p>
                       <div className="flex flex-wrap gap-1">

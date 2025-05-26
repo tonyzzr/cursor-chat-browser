@@ -19,7 +19,7 @@ export async function GET() {
     // Get the most recent bubbles to find the active conversation
     // Let's get more bubbles to ensure we find ones with text
     const recentBubbles = await db.all(`
-      SELECT [key], value FROM cursorDiskKV 
+      SELECT rowid, [key], value FROM cursorDiskKV 
       WHERE [key] LIKE 'bubbleId:%'
       ORDER BY rowid DESC
       LIMIT 200
@@ -41,7 +41,8 @@ export async function GET() {
         conversationGroups.get(chatId)?.push({
           ...parsed,
           bubbleKey: bubble.key,
-          bubbleId: keyParts[2]
+          bubbleId: keyParts[2],
+          rowId: bubble.rowid
         })
       } catch (e) {
         // Skip invalid bubbles
@@ -57,6 +58,9 @@ export async function GET() {
       let maxTextBubbles = 0
       
       for (const [chatId, bubbles] of Array.from(conversationGroups.entries())) {
+        // Sort bubbles by rowId (chronological order) - higher rowId = more recent
+        bubbles.sort((a, b) => a.rowId - b.rowId)
+        
         const textBubbleCount = bubbles.filter(b => b.text && b.text.length > 0).length
         console.log(`Chat ${chatId}: ${bubbles.length} bubbles, ${textBubbleCount} with text`)
         
